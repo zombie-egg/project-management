@@ -4,6 +4,9 @@
  */
 const path = require('path');
 
+const dataRoot = process.env.DATA_DIR
+  || (process.env.NODE_ENV === 'production' ? '/data' : path.join(__dirname, '..', 'data'));
+
 module.exports = {
   // 服务端口
   PORT: process.env.PORT || 3000,
@@ -12,9 +15,9 @@ module.exports = {
   // token 有效期
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '12h',
   // SQLite 数据库文件路径
-  DB_PATH: process.env.DB_PATH || path.join(__dirname, '..', 'data', 'app.db'),
+  DB_PATH: process.env.DB_PATH || path.join(dataRoot, 'app.db'),
   // 文件上传根目录（可在系统设置中动态修改，此处为默认值）
-  UPLOAD_DIR: process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'),
+  UPLOAD_DIR: process.env.UPLOAD_DIR || path.join(dataRoot, 'uploads'),
   // 单文件最大限制：200MB
   MAX_FILE_SIZE: 200 * 1024 * 1024,
   // 允许上传的文件类型（文档 / 图片 / 视频）

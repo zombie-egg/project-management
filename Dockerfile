@@ -25,9 +25,11 @@ FROM node:20-bookworm-slim
 
 WORKDIR /app
 ENV NODE_ENV=production
+ENV DATA_DIR=/data
 
 COPY --from=build /app/backend ./backend
 
 EXPOSE 3000
+VOLUME ["/data"]
 
 CMD ["node", "backend/src/server.js"]
