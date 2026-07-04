@@ -20,8 +20,24 @@
         <el-select v-model="query.type" placeholder="款项类型" clearable><el-option v-for="(v,k) in LEDGER_TYPE_LABEL" :key="k" :label="v" :value="k" /></el-select>
         <el-select v-model="query.direction" placeholder="收支方向" clearable><el-option label="收入" value="in" /><el-option label="支出" value="out" /></el-select>
         <el-date-picker v-model="range" type="daterange" range-separator="~" start-placeholder="起" end-placeholder="止" value-format="YYYY-MM-DD" />
+        <el-date-picker v-model="query.year" type="year" value-format="YYYY" placeholder="按年筛选" clearable />
+        <el-date-picker v-model="query.month" type="month" value-format="YYYY-MM" placeholder="按月筛选" clearable />
+        <el-select v-model="query.summary_period" placeholder="汇总维度">
+          <el-option label="按月汇总" value="month" />
+          <el-option label="按年汇总" value="year" />
+        </el-select>
         <div class="flex gap-2"><el-button type="primary" @click="reload">查询</el-button><el-button @click="reset">重置</el-button></div>
       </div>
+    </div>
+
+    <div v-if="periodSummary.length" class="apple-card mb-4">
+      <div class="font-medium mb-3">年/月筛选汇总</div>
+      <el-table :data="periodSummary" size="small">
+        <el-table-column prop="period" label="周期" width="120" />
+        <el-table-column label="收入"><template #default="{ row }">{{ money(row.total_in) }}</template></el-table-column>
+        <el-table-column label="支出"><template #default="{ row }">{{ money(row.total_out) }}</template></el-table-column>
+        <el-table-column label="结余"><template #default="{ row }">{{ money(row.balance) }}</template></el-table-column>
+      </el-table>
     </div>
 
     <div class="apple-card">
@@ -72,9 +88,10 @@ const loading = ref(false);
 const list = ref([]);
 const total = ref(0);
 const summary = reactive({ total_in: 0, total_out: 0 });
+const periodSummary = ref([]);
 const projects = ref([]);
 const range = ref([]);
-const query = reactive({ keyword: '', type: '', direction: '', start_date: '', end_date: '', page: 1, pageSize: 10 });
+const query = reactive({ keyword: '', type: '', direction: '', start_date: '', end_date: '', year: '', month: '', summary_period: 'month', page: 1, pageSize: 10 });
 
 watch(range, (v) => { query.start_date = v?.[0] || ''; query.end_date = v?.[1] || ''; });
 
@@ -84,10 +101,11 @@ async function load() {
     const data = await api.listLedger(query);
     list.value = data.list; total.value = data.total;
     Object.assign(summary, data.summary);
+    periodSummary.value = data.periodSummary || [];
   } finally { loading.value = false; }
 }
 function reload() { query.page = 1; load(); }
-function reset() { Object.assign(query, { keyword: '', type: '', direction: '', start_date: '', end_date: '', page: 1 }); range.value = []; load(); }
+function reset() { Object.assign(query, { keyword: '', type: '', direction: '', start_date: '', end_date: '', year: '', month: '', summary_period: 'month', page: 1 }); range.value = []; load(); }
 
 const dialog = ref(false);
 const form = reactive({ project_id: null, type: 'first', direction: 'in', amount: 0, received_at: null, remark: '' });

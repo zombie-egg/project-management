@@ -140,18 +140,28 @@ router.get('/overdue', authRequired, adminOnly, (req, res) => {
   return ok(res, list);
 });
 
-// ==================== 服务器到期预警 ====================
+// ==================== 服务器 / 维护费到期预警 ====================
 router.get('/expire-warning', authRequired, adminOnly, (req, res) => {
   const days = Number(req.query.days) || 30; // 默认预警未来30天内到期
   const rows = db.prepare(
-    `SELECT id, name, customer_name, server_expire_date, server_owner FROM projects
-     WHERE deleted=0 AND server_expire_date IS NOT NULL AND server_expire_date != ''`
+    `SELECT id, name, customer_name, server_expire_date, server_owner, maintenance_expire_date FROM projects
+     WHERE deleted=0
+       AND ((server_expire_date IS NOT NULL AND server_expire_date != '')
+        OR (maintenance_expire_date IS NOT NULL AND maintenance_expire_date != ''))`
   ).all();
   const today = dayjs();
-  const list = rows.map((p) => {
-    const remain = dayjs(p.server_expire_date).diff(today, 'day');
-    return { ...p, remainDays: remain, expired: remain < 0 };
-  }).filter((x) => x.remainDays <= days)
+  const list = [];
+  for (const p of rows) {
+    if (p.server_expire_date) {
+      const remain = dayjs(p.server_expire_date).diff(today, 'day');
+      if (remain <= days) list.push({ ...p, warning_type: 'server', warning_label: '服务器', expire_date: p.server_expire_date, remainDays: remain, expired: remain < 0 });
+    }
+    if (p.maintenance_expire_date) {
+      const remain = dayjs(p.maintenance_expire_date).diff(today, 'day');
+      if (remain <= days) list.push({ ...p, warning_type: 'maintenance', warning_label: '维护费', expire_date: p.maintenance_expire_date, remainDays: remain, expired: remain < 0 });
+    }
+  }
+  list
     .sort((a, b) => a.remainDays - b.remainDays);
   return ok(res, list);
 });

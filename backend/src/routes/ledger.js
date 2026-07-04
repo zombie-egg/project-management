@@ -25,6 +25,8 @@ function buildLedgerQuery(q) {
   if (q.direction) { where.push('l.direction=?'); params.push(q.direction); }
   if (q.start_date) { where.push('date(l.received_at) >= date(?)'); params.push(q.start_date); }
   if (q.end_date) { where.push('date(l.received_at) <= date(?)'); params.push(q.end_date); }
+  if (q.year) { where.push(`strftime('%Y', l.received_at)=?`); params.push(String(q.year).slice(0, 4)); }
+  if (q.month) { where.push(`strftime('%Y-%m', l.received_at)=?`); params.push(String(q.month).slice(0, 7)); }
   if (q.keyword) { where.push('(p.name LIKE ? OR l.remark LIKE ?)'); params.push(`%${q.keyword}%`, `%${q.keyword}%`); }
   return { whereSql: where.join(' AND '), params };
 }
@@ -54,8 +56,17 @@ router.get('/', (req, res) => {
        COALESCE(SUM(CASE WHEN l.direction='out' THEN l.amount ELSE 0 END),0) total_out
      FROM ledger l JOIN projects p ON p.id=l.project_id WHERE ${whereSql}`
   ).get(...params);
+  const groupExpr = q.summary_period === 'year' ? "strftime('%Y', l.received_at)" : "strftime('%Y-%m', l.received_at)";
+  const periodSummary = db.prepare(
+    `SELECT ${groupExpr} period,
+       COALESCE(SUM(CASE WHEN l.direction='in' THEN l.amount ELSE 0 END),0) total_in,
+       COALESCE(SUM(CASE WHEN l.direction='out' THEN l.amount ELSE 0 END),0) total_out
+     FROM ledger l JOIN projects p ON p.id=l.project_id
+     WHERE ${whereSql} AND l.received_at IS NOT NULL AND l.received_at != ''
+     GROUP BY period ORDER BY period DESC`
+  ).all(...params).map((r) => ({ ...r, balance: Number(r.total_in || 0) - Number(r.total_out || 0) }));
 
-  return ok(res, { list: rows, total, page, pageSize, summary: sum });
+  return ok(res, { list: rows, total, page, pageSize, summary: sum, periodSummary });
 });
 
 // 新增流水

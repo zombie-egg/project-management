@@ -31,9 +31,11 @@ const STAGE_LABEL = {
 // 项目录入允许的字段白名单
 const EDITABLE_FIELDS = [
   'project_type', 'name', 'description', 'requirement', 'duration', 'customer_name', 'customer_phone',
+  'group_name',
   'tech_id', 'status', 'start_time', 'total_reward', 'first_payment', 'mid_payment', 'final_payment',
-  'project_cost', 'tech_fee', 'server_first_push', 'server_owner', 'server_start_date',
-  'server_buy_date', 'server_expire_date', 'maintenance_amount', 'remark', 'actual_finish_time', 'settled'
+  'project_cost', 'tech_fee', 'server_first_push', 'server_owner', 'server_location', 'server_start_date',
+  'server_buy_date', 'server_expire_date', 'maintenance_amount', 'maintenance_expire_date',
+  'source_uploaded', 'remark', 'actual_finish_time', 'settled'
 ];
 
 // 给项目对象附加计算字段（利润、收入、状态标签、技术员姓名、标签）
@@ -60,13 +62,14 @@ function buildQuery(q) {
 
   // 全局模糊搜索
   if (q.keyword) {
-    where.push(`(p.name LIKE ? OR p.customer_name LIKE ? OR p.customer_phone LIKE ? OR p.description LIKE ? OR p.remark LIKE ? OR u.name LIKE ?)`);
+    where.push(`(p.name LIKE ? OR p.group_name LIKE ? OR p.customer_name LIKE ? OR p.customer_phone LIKE ? OR p.description LIKE ? OR p.remark LIKE ? OR p.server_location LIKE ? OR u.name LIKE ?)`);
     const kw = `%${q.keyword}%`;
-    params.push(kw, kw, kw, kw, kw, kw);
+    params.push(kw, kw, kw, kw, kw, kw, kw, kw);
   }
   const projectType = parseProjectTypeFilter(q.project_type);
   if (projectType) where.push(projectTypeWhere('p', projectType));
   if (q.status) { where.push(`p.status=?`); params.push(q.status); }
+  if (q.status_group === 'in_progress') where.push(`p.status IN ('stage1','stage2','stage3','stage4','stage5')`);
   if (q.tech_id) { where.push(`p.tech_id=?`); params.push(Number(q.tech_id)); }
   if (q.settled !== undefined && q.settled !== '') { where.push(`p.settled=?`); params.push(Number(q.settled)); }
   if (q.server_first_push) { where.push(`p.server_first_push=?`); params.push(q.server_first_push); }
@@ -161,27 +164,29 @@ router.post('/', authRequired, adminOnly, (req, res) => {
   const info = db.prepare(`
     INSERT INTO projects (
       project_type, name, description, requirement, duration, customer_name, customer_phone,
-      tech_id, status, start_time, total_reward, first_payment, mid_payment, final_payment,
-      project_cost, tech_fee, server_first_push, server_owner, server_start_date,
-      server_buy_date, server_expire_date, maintenance_amount, remark, actual_finish_time,
-      settled, created_by
+      group_name, tech_id, status, start_time, total_reward, first_payment, mid_payment, final_payment,
+      project_cost, tech_fee, server_first_push, server_owner, server_location, server_start_date,
+      server_buy_date, server_expire_date, maintenance_amount, maintenance_expire_date,
+      source_uploaded, remark, actual_finish_time, settled, created_by
     ) VALUES (
       @project_type,@name,@description,@requirement,@duration,@customer_name,@customer_phone,
-      @tech_id,@status,@start_time,@total_reward,@first_payment,@mid_payment,@final_payment,
-      @project_cost,@tech_fee,@server_first_push,@server_owner,@server_start_date,
-      @server_buy_date,@server_expire_date,@maintenance_amount,@remark,@actual_finish_time,
-      @settled,@created_by)
+      @group_name,@tech_id,@status,@start_time,@total_reward,@first_payment,@mid_payment,@final_payment,
+      @project_cost,@tech_fee,@server_first_push,@server_owner,@server_location,@server_start_date,
+      @server_buy_date,@server_expire_date,@maintenance_amount,@maintenance_expire_date,
+      @source_uploaded,@remark,@actual_finish_time,@settled,@created_by)
   `).run({
     project_type: projectType,
     name: b.name, description: b.description, requirement: b.requirement, duration: b.duration,
-    customer_name: b.customer_name || '', customer_phone: b.customer_phone || '',
+    customer_name: b.customer_name || '', customer_phone: b.customer_phone || '', group_name: b.group_name || '',
     tech_id: techId, status,
     start_time: b.start_time || null,
     total_reward: num(b.total_reward), first_payment: num(b.first_payment), mid_payment: num(b.mid_payment),
     final_payment: num(b.final_payment), project_cost: num(b.project_cost), tech_fee: num(b.tech_fee),
-    server_first_push: b.server_first_push || null, server_owner: b.server_owner || null,
+    server_first_push: b.server_first_push || null, server_owner: b.server_owner || null, server_location: b.server_location || null,
     server_start_date: b.server_start_date || null, server_buy_date: b.server_buy_date || null,
     server_expire_date: b.server_expire_date || null, maintenance_amount: num(b.maintenance_amount),
+    maintenance_expire_date: b.maintenance_expire_date || null,
+    source_uploaded: normalizeOptionalBool(b.source_uploaded),
     remark: b.remark || null, actual_finish_time: b.actual_finish_time || null,
     settled: b.settled ? 1 : 0, created_by: req.user.id
   });
@@ -247,9 +252,9 @@ router.put('/:id', authRequired, adminOnly, (req, res) => {
     fields.push(`${f}=?`);
     params.push(numFields.includes(f)
       ? num(b[f])
-      : (f === 'settled'
-          ? (b[f] ? 1 : 0)
-          : (['customer_name', 'customer_phone'].includes(f) ? (b[f] || '') : (b[f] || null))));
+      : (['settled', 'source_uploaded'].includes(f)
+          ? normalizeOptionalBool(b[f])
+          : (['customer_name', 'customer_phone', 'group_name'].includes(f) ? (b[f] || '') : (b[f] || null))));
   }
   if (fields.length) {
     fields.push(`updated_at=datetime('now','localtime')`);
@@ -361,6 +366,7 @@ router.get('/export/excel', authRequired, adminOnly, async (req, res) => {
     { header: '项目名称', key: 'name', width: 22 },
     { header: '客户姓名', key: 'customer_name', width: 12 },
     { header: '客户电话', key: 'customer_phone', width: 15 },
+    { header: '群名', key: 'group_name', width: 18 },
     { header: '技术员', key: 'tech_name', width: 10 },
     { header: '状态', key: 'status_label', width: 12 },
     { header: '工期', key: 'duration', width: 10 },
@@ -376,12 +382,15 @@ router.get('/export/excel', authRequired, adminOnly, async (req, res) => {
     { header: '是否结算', key: 'settled', width: 10 },
     { header: '服务器首推', key: 'server_first_push', width: 12 },
     { header: '归属', key: 'server_owner', width: 10 },
+    { header: '服务器位置', key: 'server_location', width: 16 },
     { header: '服务器到期', key: 'server_expire_date', width: 14 },
+    { header: '维护费到期', key: 'maintenance_expire_date', width: 14 },
+    { header: '源码是否提交', key: 'source_uploaded_label', width: 14 },
     { header: '实际完工时间', key: 'actual_finish_time', width: 16 },
     { header: '备注', key: 'remark', width: 24 },
     { header: '创建时间', key: 'created_at', width: 20 }
   ];
-  rows.forEach((r) => ws.addRow({ ...r, settled: r.settled ? '已结算' : '未结算' }));
+  rows.forEach((r) => ws.addRow({ ...r, settled: r.settled ? '已结算' : '未结算', source_uploaded_label: r.source_uploaded === null || r.source_uploaded === undefined ? '未填写' : (r.source_uploaded ? '是' : '否') }));
   ws.getRow(1).font = { bold: true };
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -394,6 +403,11 @@ router.get('/export/excel', authRequired, adminOnly, async (req, res) => {
 function num(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeOptionalBool(v) {
+  if (v === undefined || v === null || v === '') return null;
+  return v === true || v === 1 || v === '1' || v === '是' ? 1 : 0;
 }
 
 function setProjectTags(projectId, tagIds) {

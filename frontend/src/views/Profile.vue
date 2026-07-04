@@ -10,8 +10,19 @@
         </div>
       </div>
       <InfoRow label="联系方式" :value="me?.phone" />
+      <InfoRow label="银行卡号" :value="me?.bank_account" />
       <InfoRow label="账号状态" :value="me?.status===1?'启用':'禁用'" />
       <InfoRow label="注册时间" :value="me?.created_at" />
+    </div>
+
+    <div class="apple-card mb-4">
+      <div class="font-medium mb-4">收款银行卡</div>
+      <el-form :model="bank" label-width="90px">
+        <el-form-item label="银行卡号">
+          <el-input v-model="bank.bank_account" placeholder="请输入用于后续打款的银行卡号" />
+        </el-form-item>
+        <el-button type="primary" @click="saveBank">保存银行卡号</el-button>
+      </el-form>
     </div>
 
     <div class="apple-card">
@@ -40,6 +51,7 @@ InfoRow.props = ['label', 'value'];
 const store = useUserStore();
 const user = computed(() => store.user);
 const me = ref(null);
+const bank = reactive({ bank_account: '' });
 const pwdRef = ref();
 const pwd = reactive({ oldPassword: '', newPassword: '' });
 const rules = {
@@ -54,5 +66,15 @@ async function changePwd() {
   pwd.oldPassword = ''; pwd.newPassword = '';
 }
 
-onMounted(async () => { me.value = await api.me(); });
+async function saveBank() {
+  await api.updateBankAccount(bank);
+  ElMessage.success('银行卡号已保存');
+  me.value = await api.me();
+  bank.bank_account = me.value?.bank_account || '';
+}
+
+onMounted(async () => {
+  me.value = await api.me();
+  bank.bank_account = me.value?.bank_account || '';
+});
 </script>

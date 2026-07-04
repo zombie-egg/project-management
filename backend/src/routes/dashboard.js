@@ -20,6 +20,11 @@ router.get('/', (req, res) => {
   const where = ['deleted=0'];
   const projectType = parseProjectTypeFilter(req.query.project_type);
   if (projectType) where.push(projectTypeWhere('', projectType));
+  const period = req.query.period === 'year' ? 'year' : 'month';
+  const year = String(req.query.year || '').slice(0, 4);
+  const month = String(req.query.month || '').slice(0, 7);
+  if (month) where.push(`strftime('%Y-%m', created_at)= '${month.replace(/'/g, '')}'`);
+  else if (year) where.push(`strftime('%Y', created_at)= '${year.replace(/'/g, '')}'`);
   const whereSql = where.join(' AND ');
   const projects = db.prepare(`SELECT * FROM projects WHERE ${whereSql}`).all();
 
@@ -72,7 +77,9 @@ router.get('/', (req, res) => {
   const monthRevenue = {}; // { '2026-06': income }
   for (const r of ledgerRows) {
     if (!r.received_at) continue;
-    const ym = String(r.received_at).slice(0, 7);
+    if (month && String(r.received_at).slice(0, 7) !== month) continue;
+    if (!month && year && String(r.received_at).slice(0, 4) !== year) continue;
+    const ym = periodKey(r.received_at, period);
     if (r.direction === 'in') monthRevenue[ym] = (monthRevenue[ym] || 0) + (Number(r.amount) || 0);
   }
 
@@ -82,7 +89,7 @@ router.get('/', (req, res) => {
   for (const p of projects) {
     const { profit } = computeProfit(p);
     if (p.actual_finish_time) {
-      const ym = String(p.actual_finish_time).slice(0, 7);
+      const ym = periodKey(p.actual_finish_time, period);
       monthProfit[ym] = (monthProfit[ym] || 0) + profit;
       finishTrend[ym] = (finishTrend[ym] || 0) + 1;
     }
@@ -147,6 +154,11 @@ router.get('/', (req, res) => {
 
 function sortedSeries(obj) {
   return Object.keys(obj).sort().map((k) => ({ name: k, value: round2(obj[k]) }));
+}
+
+function periodKey(date, period) {
+  const s = String(date || '');
+  return period === 'year' ? s.slice(0, 4) : s.slice(0, 7);
 }
 
 module.exports = router;

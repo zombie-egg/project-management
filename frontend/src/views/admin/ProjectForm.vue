@@ -23,6 +23,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
         <el-form-item label="项目名称" prop="name"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="项目工期" prop="duration"><el-input v-model="form.duration" placeholder="如 30天" /></el-form-item>
+        <el-form-item label="项目群名"><el-input v-model="form.group_name" placeholder="如 客户交付群/微信群名" /></el-form-item>
         <el-form-item label="客户姓名" prop="customer_name"><el-input v-model="form.customer_name" /></el-form-item>
         <el-form-item label="客户联系方式" prop="customer_phone"><el-input v-model="form.customer_phone" /></el-form-item>
       </div>
@@ -84,6 +85,13 @@
         <el-form-item label="项目成本金额"><el-input-number v-model="form.project_cost" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
         <el-form-item label="技术费用"><el-input-number v-model="form.tech_fee" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
         <el-form-item label="维护金额"><el-input-number v-model="form.maintenance_amount" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
+        <el-form-item label="维护费到期时间"><el-date-picker v-model="form.maintenance_expire_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
+        <el-form-item label="源码是否提交">
+          <el-select v-model="form.source_uploaded" clearable placeholder="请选择" class="w-full">
+            <el-option label="是" :value="1" />
+            <el-option label="否" :value="0" />
+          </el-select>
+        </el-form-item>
       </div>
 
       <!-- 利润实时预览 -->
@@ -101,6 +109,7 @@
         <el-form-item label="服务器终推归属">
           <el-select v-model="form.server_owner" clearable class="w-full"><el-option label="个人" value="个人" /><el-option label="公司" value="公司" /></el-select>
         </el-form-item>
+        <el-form-item label="服务器位置"><el-input v-model="form.server_location" placeholder="如 阿里云华东/腾讯云广州" /></el-form-item>
         <el-form-item label="服务器开始日期"><el-date-picker v-model="form.server_start_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
         <el-form-item label="服务器购买时间"><el-date-picker v-model="form.server_buy_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
         <el-form-item label="服务器到期提醒时间"><el-date-picker v-model="form.server_expire_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
@@ -146,12 +155,13 @@ const existingFiles = ref([]);  // 已上传附件
 
 const form = reactive({
   project_type: 1, name: '', description: '', requirement: '', duration: '',
-  customer_name: '', customer_phone: '', tech_id: null,
+  customer_name: '', customer_phone: '', group_name: '', tech_id: null,
   status: 'pending',
   start_time: null, actual_finish_time: null,
   total_reward: 0, first_payment: 0, mid_payment: 0, final_payment: 0,
-  project_cost: 0, tech_fee: 0, maintenance_amount: 0,
-  server_first_push: '', server_owner: '', server_start_date: null, server_buy_date: null, server_expire_date: null,
+  project_cost: 0, tech_fee: 0, maintenance_amount: 0, maintenance_expire_date: null,
+  source_uploaded: null,
+  server_first_push: '', server_owner: '', server_location: '', server_start_date: null, server_buy_date: null, server_expire_date: null,
   tag_ids: [], settled: 0, remark: ''
 });
 

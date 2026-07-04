@@ -69,6 +69,7 @@
           <InfoRow label="项目描述" :value="p.description" />
           <InfoRow label="项目要求" :value="p.requirement" />
           <InfoRow label="项目工期" :value="p.duration" />
+          <InfoRow label="项目群名" :value="p.group_name" />
           <InfoRow label="客户姓名" :value="p.customer_name" />
           <InfoRow label="客户联系方式" :value="p.customer_phone" />
           <InfoRow label="分配技术员" :value="p.tech_name || '未分配'" />
@@ -86,6 +87,8 @@
           <InfoRow label="项目成本" :value="money(p.project_cost)" />
           <InfoRow label="技术费用" :value="money(p.tech_fee)" />
           <InfoRow label="维护金额" :value="money(p.maintenance_amount)" />
+          <InfoRow label="维护费到期" :value="p.maintenance_expire_date" />
+          <InfoRow label="源码是否提交" :value="p.source_uploaded === null || p.source_uploaded === undefined ? '未填写' : (p.source_uploaded ? '是' : '否')" />
           <div class="flex justify-between py-2 border-t border-apple-line mt-2">
             <span class="text-apple-gray">合计收入 / 利润</span>
             <span><b class="text-apple-blue">{{ money(p.income) }}</b> / <b style="color:#34c759">{{ money(p.profit) }}</b></span>
@@ -97,6 +100,7 @@
           <div class="font-medium mb-4">服务器信息</div>
           <InfoRow label="是否首推" :value="p.server_first_push" />
           <InfoRow label="终推归属" :value="p.server_owner" />
+          <InfoRow label="服务器位置" :value="p.server_location" />
           <InfoRow label="开始日期" :value="p.server_start_date" />
           <InfoRow label="购买时间" :value="p.server_buy_date" />
           <InfoRow label="到期提醒" :value="p.server_expire_date" />

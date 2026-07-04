@@ -5,7 +5,31 @@
         <h2 class="page-title" :class="theme==='dark' ? 'text-white' : ''">数据可视化大屏</h2>
         <p class="page-sub">全量统计 · 常规项目 + 旧完结维护项目 100% 并入</p>
       </div>
-      <div class="flex gap-3">
+      <div class="flex flex-wrap justify-end gap-3">
+        <el-select v-model="filters.period" class="!w-24" @change="onPeriodChange">
+          <el-option label="按月" value="month" />
+          <el-option label="按年" value="year" />
+        </el-select>
+        <el-date-picker
+          v-if="filters.period === 'month'"
+          v-model="filters.month"
+          type="month"
+          value-format="YYYY-MM"
+          placeholder="选择月份"
+          class="!w-36"
+          clearable
+          @change="load"
+        />
+        <el-date-picker
+          v-else
+          v-model="filters.year"
+          type="year"
+          value-format="YYYY"
+          placeholder="选择年份"
+          class="!w-32"
+          clearable
+          @change="load"
+        />
         <el-switch v-model="isDark" active-text="暗色大屏" inline-prompt @change="toggleTheme" />
         <el-button :icon="Refresh" circle @click="load" />
       </div>
@@ -13,7 +37,7 @@
 
     <!-- 核心指标卡片 -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div v-for="c in cards" :key="c.label" class="apple-card !p-5">
+      <div v-for="c in cards" :key="c.label" class="apple-card !p-5" :class="c.click ? 'cursor-pointer hover:!shadow-cardHover' : ''" @click="goCard(c)">
         <div class="text-sm text-apple-gray">{{ c.label }}</div>
         <div class="text-2xl font-semibold mt-2" :style="{ color: c.color }">{{ c.value }}</div>
       </div>
@@ -58,6 +82,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import * as echarts from 'echarts';
 import { Refresh } from '@element-plus/icons-vue';
 import { api } from '@/api';
@@ -65,8 +90,10 @@ import { money } from '@/utils/constants';
 
 const isDark = ref(false);
 const theme = ref('light');
+const router = useRouter();
 const cards = ref([]);
 const board = reactive({ normal: { count: 0, amount: 0 }, maintenance: { count: 0, amount: 0 } });
+const filters = reactive({ period: 'month', year: '', month: '' });
 
 const chartStatus = ref(), chartType = ref(), chartRevenue = ref(), chartProfit = ref();
 const chartTech = ref(), chartFinish = ref(), chartFund = ref(), chartServerPush = ref(), chartServerOwner = ref();
@@ -133,12 +160,12 @@ function disposeAll() {
 }
 
 async function load() {
-  const d = await api.dashboard();
+  const d = await api.dashboard(filters);
   cards.value = [
-    { label: '总项目数', value: d.cards.totalProjects, color: '#0071e3' },
-    { label: '进行中', value: d.cards.inProgress, color: '#ff9500' },
-    { label: '已完工/旧完结', value: d.cards.completed, color: '#34c759' },
-    { label: '待接单', value: d.cards.pending, color: '#86868b' },
+    { label: '总项目数', value: d.cards.totalProjects, color: '#0071e3', click: {} },
+    { label: '进行中', value: d.cards.inProgress, color: '#ff9500', click: { status_group: 'in_progress' } },
+    { label: '已完工/旧完结', value: d.cards.completed, color: '#34c759', click: { status: 'completed' } },
+    { label: '待接单', value: d.cards.pending, color: '#86868b', click: { status: 'pending' } },
     { label: '总营收', value: money(d.cards.totalIncome), color: '#0071e3' },
     { label: '总支出', value: money(d.cards.totalCost), color: '#ff375f' },
     { label: '总净利润', value: money(d.cards.totalProfit), color: '#34c759' },
@@ -165,7 +192,19 @@ function refreshWhenVisible() {
 
 function toggleTheme(v) {
   theme.value = v ? 'dark' : 'light';
+  document.body.classList.toggle('dashboard-dark-shell', !!v);
   load();
+}
+
+function onPeriodChange() {
+  if (filters.period === 'year') filters.month = '';
+  else filters.year = '';
+  load();
+}
+
+function goCard(card) {
+  if (!card.click) return;
+  router.push({ path: '/projects', query: card.click });
 }
 
 const onResize = () => instances.forEach((i) => i.resize());
@@ -175,6 +214,7 @@ onMounted(async () => {
     const s = await api.getSettings();
     if (s.dashboard_theme === 'dark') { isDark.value = true; theme.value = 'dark'; }
   } catch (e) { /* ignore */ }
+  document.body.classList.toggle('dashboard-dark-shell', isDark.value);
   await load();
   window.addEventListener('resize', onResize);
   window.addEventListener('focus', refreshWhenVisible);
@@ -186,6 +226,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('focus', refreshWhenVisible);
   document.removeEventListener('visibilitychange', refreshWhenVisible);
   if (refreshTimer) window.clearInterval(refreshTimer);
+  document.body.classList.remove('dashboard-dark-shell');
   disposeAll();
 });
 </script>

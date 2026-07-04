@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   name          TEXT NOT NULL,                  -- 姓名
   role          TEXT NOT NULL DEFAULT 'tech',   -- admin / tech
   phone         TEXT,                           -- 联系方式
+  bank_account  TEXT DEFAULT '',                -- 技术员收款银行卡号
   status        INTEGER NOT NULL DEFAULT 1,     -- 账号状态 1=启用 0=禁用
   deleted       INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS projects (
   duration              TEXT NOT NULL,          -- 项目工期
   customer_name         TEXT DEFAULT '',        -- 客户姓名（选填）
   customer_phone        TEXT DEFAULT '',        -- 客户联系方式（选填）
+  group_name            TEXT DEFAULT '',        -- 项目群名
   -- 分配技术员（project_type=2 恒为 NULL）
   tech_id               INTEGER,
   -- 项目状态：常规项目流转5阶段；历史维护完结项目固定 completed
@@ -46,10 +48,12 @@ CREATE TABLE IF NOT EXISTS projects (
   tech_fee              REAL DEFAULT 0,         -- 技术费用
   server_first_push     TEXT,                   -- 服务器是否首推：是/否
   server_owner          TEXT,                   -- 服务器终推归属：个人/公司
+  server_location       TEXT,                   -- 服务器位置
   server_start_date     TEXT,                   -- 服务器开始日期
   server_buy_date       TEXT,                   -- 服务器购买时间
   server_expire_date    TEXT,                   -- 服务器到期提醒时间
   maintenance_amount    REAL DEFAULT 0,         -- 维护金额
+  maintenance_expire_date TEXT,                 -- 维护费到期提醒时间
   remark                TEXT,                   -- 备注信息
   actual_finish_time    TEXT,                   -- 项目实际完工时间（旧项目手动录入统计）
   -- 结算状态：0=未结算 1=已结算（尾款到账）

@@ -59,6 +59,7 @@ export const api = {
   // 认证
   login: (data) => http.post('/auth/login', data),
   me: () => http.get('/auth/me'),
+  updateBankAccount: (data) => http.put('/auth/me/bank-account', data),
   changePassword: (data) => http.post('/auth/change-password', data),
 
   // 用户管理
@@ -90,7 +91,7 @@ export const api = {
   deleteFile: (fileId) => http.delete(`/files/${fileId}`),
 
   // 大屏
-  dashboard: () => http.get('/dashboard'),
+  dashboard: (params) => http.get('/dashboard', { params }),
 
   // 台账
   listLedger: (params) => http.get('/ledger', { params }),

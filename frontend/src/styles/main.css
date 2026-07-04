@@ -54,3 +54,34 @@ body {
   color: #f5f5f7;
   box-shadow: 0 2px 12px rgba(0,0,0,0.4);
 }
+
+body.dashboard-dark-shell {
+  background: #0a0a0f;
+}
+
+body.dashboard-dark-shell .el-aside,
+body.dashboard-dark-shell .el-header,
+body.dashboard-dark-shell .el-main {
+  background: #0a0a0f !important;
+  color: #f5f5f7;
+  border-color: #2c2c2e !important;
+}
+
+body.dashboard-dark-shell .el-aside .text-apple-black,
+body.dashboard-dark-shell .el-header .text-apple-black {
+  color: #f5f5f7;
+}
+
+body.dashboard-dark-shell .el-menu {
+  background: #0a0a0f !important;
+}
+
+body.dashboard-dark-shell .el-menu-item {
+  background: transparent !important;
+  color: #f5f5f7 !important;
+}
+
+body.dashboard-dark-shell .el-menu-item.is-active {
+  background: #16161c !important;
+  color: #64d2ff !important;
+}

@@ -15,12 +15,12 @@ router.use(authRequired, adminOnly);
 // 列表（技术员账号，支持关键词）
 router.get('/', (req, res) => {
   const { keyword = '', role = '' } = req.query;
-  let sql = `SELECT id, username, name, role, phone, status, created_at FROM users WHERE deleted=0`;
+  let sql = `SELECT id, username, name, role, phone, bank_account, status, created_at FROM users WHERE deleted=0`;
   const params = [];
   if (role) { sql += ` AND role=?`; params.push(role); }
   if (keyword) {
-    sql += ` AND (username LIKE ? OR name LIKE ? OR phone LIKE ?)`;
-    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    sql += ` AND (username LIKE ? OR name LIKE ? OR phone LIKE ? OR bank_account LIKE ?)`;
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
   sql += ` ORDER BY id DESC`;
   const list = db.prepare(sql).all(...params);
@@ -29,14 +29,14 @@ router.get('/', (req, res) => {
 
 // 创建单个技术员
 router.post('/', (req, res) => {
-  const { username, password, name, phone, status = 1 } = req.body || {};
+  const { username, password, name, phone, bank_account, status = 1 } = req.body || {};
   if (!username || !password || !name) return fail(res, '账号、密码、姓名为必填');
   const exists = db.prepare(`SELECT id FROM users WHERE username=?`).get(username);
   if (exists) return fail(res, `账号 ${username} 已存在`);
 
   const info = db.prepare(
-    `INSERT INTO users (username, password, name, role, phone, status) VALUES (?,?,?,?,?,?)`
-  ).run(username, bcrypt.hashSync(password, 10), name, 'tech', phone || '', status ? 1 : 0);
+    `INSERT INTO users (username, password, name, role, phone, bank_account, status) VALUES (?,?,?,?,?,?,?)`
+  ).run(username, bcrypt.hashSync(password, 10), name, 'tech', phone || '', bank_account || '', status ? 1 : 0);
 
   writeLog({ user: req.user, action: 'create_user', targetType: 'user', targetId: info.lastInsertRowid, detail: `创建账号 ${username}` });
   return ok(res, {
@@ -45,6 +45,7 @@ router.post('/', (req, res) => {
       username,
       password,
       name,
+      bank_account,
       role: 'tech',
       status: status ? 1 : 0
     }
@@ -57,7 +58,7 @@ router.post('/batch', (req, res) => {
   if (!Array.isArray(list) || list.length === 0) return fail(res, '批量列表不能为空');
 
   const insert = db.prepare(
-    `INSERT INTO users (username, password, name, role, phone, status) VALUES (?,?,?,?,?,?)`
+    `INSERT INTO users (username, password, name, role, phone, bank_account, status) VALUES (?,?,?,?,?,?,?)`
   );
   const results = { success: 0, created: [], failed: [] };
   const tx = db.transaction((items) => {
@@ -65,13 +66,14 @@ router.post('/batch', (req, res) => {
       if (!it.username || !it.password || !it.name) { results.failed.push({ ...it, reason: '缺少必填字段' }); continue; }
       const exists = db.prepare(`SELECT id FROM users WHERE username=?`).get(it.username);
       if (exists) { results.failed.push({ ...it, reason: '账号已存在' }); continue; }
-      const info = insert.run(it.username, bcrypt.hashSync(it.password, 10), it.name, 'tech', it.phone || '', it.status === 0 ? 0 : 1);
+      const info = insert.run(it.username, bcrypt.hashSync(it.password, 10), it.name, 'tech', it.phone || '', it.bank_account || '', it.status === 0 ? 0 : 1);
       results.success++;
       results.created.push({
         id: info.lastInsertRowid,
         username: it.username,
         password: it.password,
         name: it.name,
+        bank_account: it.bank_account || '',
         role: 'tech',
         status: it.status === 0 ? 0 : 1
       });
@@ -88,11 +90,12 @@ router.put('/:id', (req, res) => {
   const user = db.prepare(`SELECT * FROM users WHERE id=? AND deleted=0`).get(id);
   if (!user) return fail(res, '用户不存在', 404);
 
-  const { name, phone, status, password } = req.body || {};
+  const { name, phone, bank_account, status, password } = req.body || {};
   const fields = [];
   const params = [];
   if (name !== undefined) { fields.push('name=?'); params.push(name); }
   if (phone !== undefined) { fields.push('phone=?'); params.push(phone); }
+  if (bank_account !== undefined) { fields.push('bank_account=?'); params.push(bank_account || ''); }
   if (status !== undefined) { fields.push('status=?'); params.push(status ? 1 : 0); }
   if (password) { fields.push('password=?'); params.push(bcrypt.hashSync(password, 10)); }
   if (fields.length === 0) return fail(res, '没有可更新的字段');

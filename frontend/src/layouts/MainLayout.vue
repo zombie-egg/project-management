@@ -29,7 +29,7 @@
         <div class="flex items-center gap-4">
           <el-tag v-if="warning.length" type="danger" effect="light" class="cursor-pointer" @click="goOverdue">
             <el-icon class="mr-1"><Warning /></el-icon>
-            {{ warning.length }} 个服务器即将到期/已过期
+            {{ warning.length }} 个服务器/维护费即将到期/已过期
           </el-tag>
           <el-dropdown @command="onCommand">
             <span class="flex items-center gap-2 cursor-pointer text-apple-black">

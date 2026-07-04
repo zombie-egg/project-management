@@ -14,7 +14,7 @@
     <!-- 筛选栏 -->
     <div class="apple-card mb-4">
       <div class="project-filter-grid">
-        <el-input v-model="query.keyword" placeholder="搜索项目/客户/电话/描述/技术员/备注" clearable :prefix-icon="Search" @keyup.enter="reload" @clear="reload" />
+        <el-input v-model="query.keyword" placeholder="搜索项目/群名/客户/电话/描述/技术员/备注" clearable :prefix-icon="Search" @keyup.enter="reload" @clear="reload" />
         <el-select v-model="query.project_type" placeholder="项目类型" clearable @change="reload" @clear="reload">
           <el-option label="常规开发项目" :value="1" /><el-option label="历史维护完结项目" :value="2" />
         </el-select>
@@ -75,6 +75,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="customer_name" label="客户" width="90" />
+        <el-table-column prop="group_name" label="群名" min-width="120" show-overflow-tooltip />
         <el-table-column prop="tech_name" label="技术员" width="80" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
@@ -86,6 +87,10 @@
         <el-table-column label="结算" width="80">
           <template #default="{ row }"><el-tag :type="row.settled ? 'success' : 'warning'" size="small" effect="plain">{{ row.settled ? '已结算' : '未结算' }}</el-tag></template>
         </el-table-column>
+        <el-table-column label="源码" width="80">
+          <template #default="{ row }">{{ row.source_uploaded === null || row.source_uploaded === undefined ? '—' : (row.source_uploaded ? '是' : '否') }}</template>
+        </el-table-column>
+        <el-table-column prop="maintenance_expire_date" label="维护到期" width="120" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="$router.push(`/projects/${row.id}`)">详情</el-button>
@@ -121,12 +126,14 @@
 
 <script setup>
 import { ref, reactive, watch, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Download, Search, Delete } from '@element-plus/icons-vue';
 import { api } from '@/api';
 import { STATUS_LABEL, STATUS_TAG_TYPE, money, isHistoryProject, projectTypeShortLabel } from '@/utils/constants';
 
 const loading = ref(false);
+const route = useRoute();
 const list = ref([]);
 const total = ref(0);
 const techs = ref([]);
@@ -137,7 +144,7 @@ const finishRange = ref([]);
 
 const query = reactive({
   keyword: '', project_type: '', status: '', tech_id: '', settled: '',
-  server_first_push: '', server_owner: '', tag_id: '',
+  status_group: '', server_first_push: '', server_owner: '', tag_id: '',
   start_date: '', end_date: '', finish_start: '', finish_end: '',
   page: 1, pageSize: 10
 });
@@ -157,7 +164,7 @@ async function load() {
 }
 function reload() { query.page = 1; load(); }
 function resetQuery() {
-  Object.assign(query, { keyword: '', project_type: '', status: '', tech_id: '', settled: '', server_first_push: '', server_owner: '', tag_id: '', start_date: '', end_date: '', finish_start: '', finish_end: '', page: 1 });
+  Object.assign(query, { keyword: '', project_type: '', status: '', status_group: '', tech_id: '', settled: '', server_first_push: '', server_owner: '', tag_id: '', start_date: '', end_date: '', finish_start: '', finish_end: '', page: 1 });
   createRange.value = []; finishRange.value = [];
   load();
 }
@@ -195,6 +202,9 @@ async function confirmAssign() {
 
 onMounted(async () => {
   [techs.value, tags.value] = await Promise.all([api.techOptions(), api.listTags()]);
+  if (route.query.status) query.status = route.query.status;
+  if (route.query.status_group) query.status_group = route.query.status_group;
+  if (route.query.project_type) query.project_type = Number(route.query.project_type);
   load();
 });
 </script>

@@ -33,16 +33,25 @@ router.post('/login', (req, res) => {
 
   return ok(res, {
     token,
-    user: { id: user.id, username: user.username, name: user.name, role: user.role, phone: user.phone }
+    user: { id: user.id, username: user.username, name: user.name, role: user.role, phone: user.phone, bank_account: user.bank_account }
   });
 });
 
 // 当前用户信息
 router.get('/me', authRequired, (req, res) => {
   const user = db.prepare(
-    `SELECT id, username, name, role, phone, status, created_at FROM users WHERE id=?`
+    `SELECT id, username, name, role, phone, bank_account, status, created_at FROM users WHERE id=?`
   ).get(req.user.id);
   return ok(res, user);
+});
+
+// 修改自己的银行卡号
+router.put('/me/bank-account', authRequired, (req, res) => {
+  const { bank_account = '' } = req.body || {};
+  db.prepare(`UPDATE users SET bank_account=?, updated_at=datetime('now','localtime') WHERE id=?`)
+    .run(String(bank_account).trim(), req.user.id);
+  writeLog({ user: req.user, action: 'update_bank_account', targetType: 'user', targetId: req.user.id, detail: '维护银行卡号' });
+  return ok(res, null, '保存成功');
 });
 
 // 修改自己的密码
