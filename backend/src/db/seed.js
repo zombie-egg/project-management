@@ -7,15 +7,29 @@ const db = require('./index');
 const initDb = require('./init');
 const { computeProfit } = require('../utils/profit');
 
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = 'Ccj940904';
+const ADMIN_PASSWORD_VERSION = '20260704_ccj940904';
+
 function seed() {
   initDb();
 
   const now = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-  // 若已存在管理员则跳过
-  const adminExists = db.prepare("SELECT id FROM users WHERE username='admin'").get();
+  // 若已存在管理员，同步一次当前交付密码；之后用户自行改密不会被重启覆盖。
+  const adminExists = db.prepare('SELECT id FROM users WHERE username=?').get(ADMIN_USERNAME);
   if (adminExists) {
-    console.log('ℹ️  已存在数据，跳过 seed。如需重置请删除 data/app.db 后重试。');
+    const version = db.prepare("SELECT value FROM settings WHERE key='admin_password_seed_version'").get();
+    if (version?.value !== ADMIN_PASSWORD_VERSION) {
+      db.prepare(
+        `UPDATE users SET password=?, status=1, updated_at=datetime('now','localtime') WHERE id=?`
+      ).run(bcrypt.hashSync(ADMIN_PASSWORD, 10), adminExists.id);
+      db.prepare(`INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)`)
+        .run('admin_password_seed_version', ADMIN_PASSWORD_VERSION);
+      console.log('ℹ️  已存在数据，已同步管理员默认密码，跳过其他 seed。');
+    } else {
+      console.log('ℹ️  已存在数据，跳过 seed。');
+    }
     return;
   }
 
@@ -23,9 +37,9 @@ function seed() {
     `INSERT INTO users (username, password, name, role, phone, status) VALUES (?,?,?,?,?,?)`
   );
 
-  // 默认管理员：admin / admin123
+  // 默认管理员：admin / Ccj940904
   const adminId = insertUser.run(
-    'admin', bcrypt.hashSync('admin123', 10), '超级管理员', 'admin', '13800000000', 1
+    ADMIN_USERNAME, bcrypt.hashSync(ADMIN_PASSWORD, 10), '超级管理员', 'admin', '13800000000', 1
   ).lastInsertRowid;
 
   // 示例技术员：tech01 / tech123
@@ -118,9 +132,10 @@ function seed() {
   insertSetting.run('upload_dir', '');           // 空=使用默认
   insertSetting.run('max_file_size_mb', '200');
   insertSetting.run('dashboard_theme', 'light');
+  insertSetting.run('admin_password_seed_version', ADMIN_PASSWORD_VERSION);
 
   console.log('✅ 种子数据初始化完成');
-  console.log('   管理员账号：admin / admin123');
+  console.log(`   管理员账号：admin / ${ADMIN_PASSWORD}`);
   console.log('   技术员账号：tech01 / tech123 , tech02 / tech123');
 }
 

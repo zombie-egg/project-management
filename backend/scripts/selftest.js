@@ -27,7 +27,7 @@ async function req(method, url, body, token) {
   assert(h.data.code === 0, '健康检查通过');
 
   console.log('\n=== 2. 登录 ===');
-  const login = await req('POST', '/auth/login', { username: 'admin', password: 'admin123' });
+  const login = await req('POST', '/auth/login', { username: 'admin', password: 'Ccj940904' });
   assert(login.data.code === 0 && login.data.data.token, '管理员登录成功');
   const adminToken = login.data.data.token;
   const cleanup = { userId: null, projectIds: [], tagId: null };

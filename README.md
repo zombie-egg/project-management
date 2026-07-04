@@ -63,7 +63,7 @@ npm run dev
 
 | 角色 | 账号 | 密码 |
 |------|------|------|
-| 管理员 | admin | admin123 |
+| 管理员 | admin | Ccj940904 |
 | 技术员 | tech01 | tech123 |
 | 技术员 | tech02 | tech123 |
 

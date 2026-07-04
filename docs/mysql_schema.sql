@@ -1,7 +1,7 @@
 -- ============================================================
 -- 项目接单管理后台 - MySQL 建表脚本（生产环境迁移用）
 -- 字符集 utf8mb4，逻辑软删除
--- 默认管理员：admin / admin123（密码为 bcrypt 加密，见文末说明）
+-- 默认管理员：admin / Ccj940904（密码为 bcrypt 加密，见文末说明）
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS project_admin DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
@@ -168,12 +168,12 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- ============================================================
 -- 初始化数据
--- 默认管理员密码 admin123 的 bcrypt 值（$2a$10$...）
+-- 默认管理员密码 Ccj940904 的 bcrypt 值（$2a$10$...）
 -- 注意：下方 hash 为示例，请用 backend 的 bcryptjs 重新生成，或直接用 Node 版自动 seed。
--- 生成命令：node -e "console.log(require('bcryptjs').hashSync('admin123',10))"
+-- 生成命令：node -e "console.log(require('bcryptjs').hashSync('Ccj940904',10))"
 -- ============================================================
 INSERT INTO users (username, password, name, role, phone, status)
-VALUES ('admin', '$2a$10$4z5.BVKvg9Pq0/UTFXxS1eQtYpflBwMiLt8k7p3TOO1ZeOyCoxihS', '超级管理员', 'admin', '13800000000', 1);
+VALUES ('admin', '$2a$10$/d0UZQFVqD5nhyK95p.V0OhcNYVvLcbMni1ILTfFdXRxqFnNNv4.2', '超级管理员', 'admin', '13800000000', 1);
 
 INSERT INTO settings (`key`, value) VALUES
   ('upload_dir', ''),
