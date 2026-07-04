@@ -15,9 +15,6 @@
           </el-form-item>
           <el-button type="primary" class="w-full" :loading="loading" @click="onSubmit">登 录</el-button>
         </el-form>
-        <div class="mt-6 text-xs text-apple-gray text-center leading-relaxed">
-          管理员：admin / admin123 &nbsp;·&nbsp; 技术员：tech01 / tech123
-        </div>
       </div>
     </div>
   </div>
