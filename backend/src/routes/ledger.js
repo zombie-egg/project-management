@@ -1,0 +1,114 @@
+/**
+ * 资金台账模块（仅管理员）
+ * 所有收支流水，新旧项目全部入账，支持筛选、导出
+ */
+const express = require('express');
+const ExcelJS = require('exceljs');
+const db = require('../db');
+const { ok, fail } = require('../utils/resp');
+const { authRequired, adminOnly } = require('../middleware/auth');
+const { writeLog } = require('../utils/logger');
+const { parseProjectTypeFilter, projectTypeLabel, projectTypeWhere } = require('../utils/projectType');
+
+const router = express.Router();
+router.use(authRequired, adminOnly);
+
+const TYPE_LABEL = { first: '首付款', mid: '中期款', final: '尾款', maintenance: '维护款', cost: '成本支出', techfee: '技术费用' };
+
+function buildLedgerQuery(q) {
+  const where = ['l.deleted=0', 'p.deleted=0'];
+  const params = [];
+  if (q.project_id) { where.push('l.project_id=?'); params.push(Number(q.project_id)); }
+  const projectType = parseProjectTypeFilter(q.project_type);
+  if (projectType) where.push(projectTypeWhere('p', projectType));
+  if (q.type) { where.push('l.type=?'); params.push(q.type); }
+  if (q.direction) { where.push('l.direction=?'); params.push(q.direction); }
+  if (q.start_date) { where.push('date(l.received_at) >= date(?)'); params.push(q.start_date); }
+  if (q.end_date) { where.push('date(l.received_at) <= date(?)'); params.push(q.end_date); }
+  if (q.keyword) { where.push('(p.name LIKE ? OR l.remark LIKE ?)'); params.push(`%${q.keyword}%`, `%${q.keyword}%`); }
+  return { whereSql: where.join(' AND '), params };
+}
+
+// 列表
+router.get('/', (req, res) => {
+  const q = req.query;
+  const page = Math.max(1, Number(q.page) || 1);
+  const pageSize = Math.min(200, Math.max(1, Number(q.pageSize) || 10));
+  const { whereSql, params } = buildLedgerQuery(q);
+
+  const total = db.prepare(
+    `SELECT COUNT(*) c FROM ledger l JOIN projects p ON p.id=l.project_id WHERE ${whereSql}`
+  ).get(...params).c;
+  const rows = db.prepare(
+    `SELECT l.*, p.name project_name, p.project_type, u.name operator_name
+     FROM ledger l JOIN projects p ON p.id=l.project_id LEFT JOIN users u ON u.id=l.operator_id
+     WHERE ${whereSql} ORDER BY l.id DESC LIMIT ? OFFSET ?`
+  ).all(...params, pageSize, (page - 1) * pageSize);
+  rows.forEach((r) => { r.type_label = TYPE_LABEL[r.type] || r.type; });
+  rows.forEach((r) => { r.project_type_label = projectTypeLabel(r.project_type); });
+
+  // 汇总
+  const sum = db.prepare(
+    `SELECT
+       COALESCE(SUM(CASE WHEN l.direction='in' THEN l.amount ELSE 0 END),0) total_in,
+       COALESCE(SUM(CASE WHEN l.direction='out' THEN l.amount ELSE 0 END),0) total_out
+     FROM ledger l JOIN projects p ON p.id=l.project_id WHERE ${whereSql}`
+  ).get(...params);
+
+  return ok(res, { list: rows, total, page, pageSize, summary: sum });
+});
+
+// 新增流水
+router.post('/', (req, res) => {
+  const { project_id, type, amount, direction = 'in', received_at, remark } = req.body || {};
+  if (!project_id || !type || amount === undefined) return fail(res, '项目、类型、金额为必填');
+  const p = db.prepare(`SELECT * FROM projects WHERE id=? AND deleted=0`).get(Number(project_id));
+  if (!p) return fail(res, '项目不存在', 404);
+  const info = db.prepare(
+    `INSERT INTO ledger (project_id, type, amount, direction, received_at, operator_id, remark) VALUES (?,?,?,?,?,?,?)`
+  ).run(Number(project_id), type, Number(amount) || 0, direction === 'out' ? 'out' : 'in', received_at || null, req.user.id, remark || null);
+  writeLog({ user: req.user, action: 'add_ledger', targetType: 'ledger', targetId: info.lastInsertRowid, detail: `新增流水 ${TYPE_LABEL[type] || type} ${amount} 元（项目：${p.name}）` });
+  return ok(res, { id: info.lastInsertRowid }, '新增成功');
+});
+
+// 删除流水
+router.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const row = db.prepare(`SELECT * FROM ledger WHERE id=? AND deleted=0`).get(id);
+  if (!row) return fail(res, '流水不存在', 404);
+  db.prepare(`UPDATE ledger SET deleted=1 WHERE id=?`).run(id);
+  writeLog({ user: req.user, action: 'delete_ledger', targetType: 'ledger', targetId: id, detail: `删除流水 #${id}` });
+  return ok(res, null, '删除成功');
+});
+
+// 导出
+router.get('/export/excel', async (req, res) => {
+  const { whereSql, params } = buildLedgerQuery(req.query);
+  const rows = db.prepare(
+    `SELECT l.*, p.name project_name, p.project_type, u.name operator_name
+     FROM ledger l JOIN projects p ON p.id=l.project_id LEFT JOIN users u ON u.id=l.operator_id
+     WHERE ${whereSql} ORDER BY l.id DESC`
+  ).all(...params);
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('资金台账');
+  ws.columns = [
+    { header: 'ID', key: 'id', width: 6 },
+    { header: '项目名称', key: 'project_name', width: 22 },
+    { header: '项目类型', key: 'project_type_label', width: 18 },
+    { header: '款项类型', key: 'type_label', width: 12 },
+    { header: '方向', key: 'direction', width: 8 },
+    { header: '金额', key: 'amount', width: 12 },
+    { header: '收付款时间', key: 'received_at', width: 16 },
+    { header: '操作人', key: 'operator_name', width: 10 },
+    { header: '备注', key: 'remark', width: 24 }
+  ];
+  rows.forEach((r) => ws.addRow({ ...r, type_label: TYPE_LABEL[r.type] || r.type, project_type_label: projectTypeLabel(r.project_type), direction: r.direction === 'in' ? '收入' : '支出' }));
+  ws.getRow(1).font = { bold: true };
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename=ledger_${Date.now()}.xlsx`);
+  await wb.xlsx.write(res);
+  res.end();
+});
+
+module.exports = router;
