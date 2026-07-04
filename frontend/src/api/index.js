@@ -108,6 +108,7 @@ export const api = {
   getSettings: () => http.get('/settings'),
   updateSettings: (data) => http.put('/settings', data),
   performance: () => http.get('/performance'),
+  techSummary: () => http.get('/tech-summary'),
   overdue: () => http.get('/overdue'),
   expireWarning: (days) => http.get('/expire-warning', { params: { days } }),
   maintenanceReport: () => http.get('/maintenance-report'),

@@ -166,6 +166,7 @@ async function load() {
     { label: '进行中', value: d.cards.inProgress, color: '#ff9500', click: { status_group: 'in_progress' } },
     { label: '已完工/旧完结', value: d.cards.completed, color: '#34c759', click: { status: 'completed' } },
     { label: '待接单', value: d.cards.pending, color: '#86868b', click: { status: 'pending' } },
+    { label: '待结算申请', value: d.cards.pendingPaymentRequests, color: '#ff375f', click: { payment_requested: 1 } },
     { label: '总营收', value: money(d.cards.totalIncome), color: '#0071e3' },
     { label: '总支出', value: money(d.cards.totalCost), color: '#ff375f' },
     { label: '总净利润', value: money(d.cards.totalProfit), color: '#34c759' },

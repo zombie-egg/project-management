@@ -22,6 +22,7 @@ const routes = [
       { path: 'logs', name: 'logs', component: () => import('@/views/admin/Logs.vue'), meta: { admin: true, title: '操作日志' } },
       { path: 'settings', name: 'settings', component: () => import('@/views/admin/Settings.vue'), meta: { admin: true, title: '系统设置' } },
       // 技术员
+      { path: 'tech-summary', name: 'tech-summary', component: () => import('@/views/tech/Summary.vue'), meta: { tech: true, title: '我的汇总' } },
       { path: 'my-projects', name: 'my-projects', component: () => import('@/views/tech/MyProjects.vue'), meta: { tech: true, title: '我的项目' } },
       // 通用
       { path: 'profile', name: 'profile', component: () => import('@/views/Profile.vue'), meta: { title: '个人中心' } }

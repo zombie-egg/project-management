@@ -12,6 +12,10 @@ const { PROJECT_TYPE, parseProjectTypeFilter, projectTypeLabel, projectTypeWhere
 const dayjs = require('dayjs');
 
 const router = express.Router();
+const STATUS_LABEL = {
+  pending: '待接单', stage1: '接单', stage2: '初版展示', stage3: '终版修改',
+  stage4: '完成源码上传', stage5: '提交付款申请', completed: '已完工'
+};
 
 // ==================== 操作日志 ====================
 router.get('/logs', authRequired, adminOnly, (req, res) => {
@@ -253,6 +257,69 @@ router.get('/history-finish-stat', authRequired, adminOnly, (req, res) => {
     })
   });
 });
+
+// ==================== 技术员个人汇总 ====================
+router.get('/tech-summary', authRequired, (req, res) => {
+  if (req.user.role !== 'tech') return fail(res, '仅技术员可查看个人汇总', 403);
+  const rows = db.prepare(
+    `SELECT * FROM projects
+     WHERE deleted=0 AND ${projectTypeWhere('', PROJECT_TYPE.NORMAL)} AND tech_id=?
+     ORDER BY id DESC`
+  ).all(req.user.id);
+
+  let totalIncome = 0;
+  let totalTechFee = 0;
+  let unpaidTechFee = 0;
+  let completed = 0;
+  let paymentRequested = 0;
+
+  const list = rows.map((p) => {
+    const { income } = computeProfit(p);
+    const techFee = Number(p.tech_fee) || 0;
+    totalIncome += income;
+    totalTechFee += techFee;
+    if (!p.settled) unpaidTechFee += techFee;
+    if (p.status === 'completed') completed++;
+    if (p.payment_requested && !p.settled) paymentRequested++;
+    return {
+      id: p.id,
+      name: p.name,
+      customer_name: p.customer_name,
+      status: p.status,
+      status_label: STATUS_LABEL[p.status] || p.status,
+      progress: progressPercent(p.status),
+      income: round2(income),
+      tech_fee: round2(techFee),
+      unpaid_tech_fee: p.settled ? 0 : round2(techFee),
+      payment_requested: p.payment_requested,
+      source_uploaded: p.source_uploaded,
+      settled: p.settled,
+      start_time: p.start_time,
+      actual_finish_time: p.actual_finish_time
+    };
+  });
+
+  return ok(res, {
+    summary: {
+      totalOrders: rows.length,
+      completed,
+      inProgress: rows.filter((p) => !['pending', 'completed'].includes(p.status)).length,
+      paymentRequested,
+      totalIncome: round2(totalIncome),
+      totalTechFee: round2(totalTechFee),
+      unpaidTechFee: round2(unpaidTechFee),
+      completeRate: rows.length ? round2((completed / rows.length) * 100) : 0
+    },
+    list
+  });
+});
+
+function progressPercent(status) {
+  const flow = ['pending', 'stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'completed'];
+  const idx = flow.indexOf(status);
+  if (idx <= 0) return 0;
+  return Math.round((idx / (flow.length - 1)) * 100);
+}
 
 // ==================== 简易统计：技术员下拉、项目下拉 ====================
 router.get('/options/techs', authRequired, (req, res) => {

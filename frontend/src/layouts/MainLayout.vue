@@ -84,6 +84,7 @@ const adminMenus = [
   { path: '/settings', title: '系统设置', icon: 'Setting' }
 ];
 const techMenus = [
+  { path: '/tech-summary', title: '我的汇总', icon: 'DataAnalysis' },
   { path: '/my-projects', title: '我的项目', icon: 'Folder' }
 ];
 

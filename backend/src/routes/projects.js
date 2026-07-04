@@ -70,6 +70,7 @@ function buildQuery(q) {
   if (projectType) where.push(projectTypeWhere('p', projectType));
   if (q.status) { where.push(`p.status=?`); params.push(q.status); }
   if (q.status_group === 'in_progress') where.push(`p.status IN ('stage1','stage2','stage3','stage4','stage5')`);
+  if (q.payment_requested !== undefined && q.payment_requested !== '') { where.push(`p.payment_requested=?`); params.push(Number(q.payment_requested)); }
   if (q.tech_id) { where.push(`p.tech_id=?`); params.push(Number(q.tech_id)); }
   if (q.settled !== undefined && q.settled !== '') { where.push(`p.settled=?`); params.push(Number(q.settled)); }
   if (q.server_first_push) { where.push(`p.server_first_push=?`); params.push(q.server_first_push); }
@@ -84,6 +85,8 @@ function buildQuery(q) {
   // 完工时间区间
   if (q.finish_start) { where.push(`date(p.actual_finish_time) >= date(?)`); params.push(q.finish_start); }
   if (q.finish_end) { where.push(`date(p.actual_finish_time) <= date(?)`); params.push(q.finish_end); }
+  if (q.maintenance_expire_start) { where.push(`date(p.maintenance_expire_date) >= date(?)`); params.push(q.maintenance_expire_start); }
+  if (q.maintenance_expire_end) { where.push(`date(p.maintenance_expire_date) <= date(?)`); params.push(q.maintenance_expire_end); }
 
   return { whereSql: where.join(' AND '), params };
 }

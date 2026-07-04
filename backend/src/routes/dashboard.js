@@ -30,7 +30,7 @@ router.get('/', (req, res) => {
 
   // ---- 核心指标 ----
   let totalIncome = 0, totalCost = 0, totalProfit = 0, pendingSettle = 0;
-  let inProgress = 0, completed = 0, pending = 0;
+  let inProgress = 0, completed = 0, pending = 0, pendingPaymentRequests = 0;
   let normalCount = 0, maintenanceCount = 0;
   let normalAmount = 0, maintenanceAmount = 0;
   const statusDist = {};
@@ -54,6 +54,7 @@ router.get('/', (req, res) => {
     if (p.status === 'completed') completed++;
     else if (p.status === 'pending') pending++;
     else inProgress++;
+    if (p.payment_requested && !p.settled) pendingPaymentRequests++;
 
     if (isHistoryProject(p)) { maintenanceCount++; maintenanceAmount += income; }
     else { normalCount++; normalAmount += income; }
@@ -115,6 +116,7 @@ router.get('/', (req, res) => {
       inProgress,
       completed,
       pending,
+      pendingPaymentRequests,
       totalIncome: round2(totalIncome),
       totalCost: round2(totalCost),
       totalProfit: round2(totalProfit),

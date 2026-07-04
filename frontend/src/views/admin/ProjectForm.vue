@@ -84,8 +84,6 @@
         <el-form-item label="尾款"><el-input-number v-model="form.final_payment" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
         <el-form-item label="项目成本金额"><el-input-number v-model="form.project_cost" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
         <el-form-item label="技术费用"><el-input-number v-model="form.tech_fee" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
-        <el-form-item label="维护金额"><el-input-number v-model="form.maintenance_amount" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
-        <el-form-item label="维护费到期时间"><el-date-picker v-model="form.maintenance_expire_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
         <el-form-item label="源码是否提交">
           <el-select v-model="form.source_uploaded" clearable placeholder="请选择" class="w-full">
             <el-option label="是" :value="1" />
@@ -99,6 +97,12 @@
         <div><span class="text-apple-gray text-sm">合计收入：</span><span class="font-semibold text-apple-blue">{{ money(income) }}</span></div>
         <div><span class="text-apple-gray text-sm">项目利润：</span><span class="font-semibold" style="color:#34c759">{{ money(profit) }}</span></div>
         <div class="text-xs text-apple-gray self-center">利润 =（首付+中期+尾款）- 成本 - 技术费用</div>
+      </div>
+
+      <el-divider content-position="left">维护费信息</el-divider>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-x-4">
+        <el-form-item label="维护金额"><el-input-number v-model="form.maintenance_amount" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
+        <el-form-item label="维护费到期时间"><el-date-picker v-model="form.maintenance_expire_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
       </div>
 
       <el-divider content-position="left">服务器信息</el-divider>

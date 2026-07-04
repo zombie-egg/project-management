@@ -27,6 +27,10 @@
         <el-select v-model="query.settled" placeholder="结算状态" clearable @change="reload" @clear="reload">
           <el-option label="已结算" :value="1" /><el-option label="未结算" :value="0" />
         </el-select>
+        <el-select v-model="query.payment_requested" placeholder="付款申请" clearable @change="reload" @clear="reload">
+          <el-option label="待结算申请" :value="1" />
+          <el-option label="无付款申请" :value="0" />
+        </el-select>
         <el-select v-model="query.server_first_push" placeholder="服务器首推" clearable @change="reload" @clear="reload">
           <el-option label="是" value="是" /><el-option label="否" value="否" />
         </el-select>
@@ -43,6 +47,10 @@
         <div class="filter-date-group">
           <div class="filter-date-label">完工时间</div>
           <el-date-picker v-model="finishRange" class="filter-date-range" type="daterange" range-separator="~" start-placeholder="完工起" end-placeholder="完工止" value-format="YYYY-MM-DD" @change="reload" />
+        </div>
+        <div class="filter-date-group">
+          <div class="filter-date-label">维护费到期</div>
+          <el-date-picker v-model="maintenanceExpireRange" class="filter-date-range" type="daterange" range-separator="~" start-placeholder="到期起" end-placeholder="到期止" value-format="YYYY-MM-DD" @change="reload" />
         </div>
         <div class="filter-actions">
           <el-button type="primary" @click="reload">查询</el-button>
@@ -141,16 +149,18 @@ const tags = ref([]);
 const selection = ref([]);
 const createRange = ref([]);
 const finishRange = ref([]);
+const maintenanceExpireRange = ref([]);
 
 const query = reactive({
   keyword: '', project_type: '', status: '', tech_id: '', settled: '',
-  status_group: '', server_first_push: '', server_owner: '', tag_id: '',
-  start_date: '', end_date: '', finish_start: '', finish_end: '',
+  status_group: '', payment_requested: '', server_first_push: '', server_owner: '', tag_id: '',
+  start_date: '', end_date: '', finish_start: '', finish_end: '', maintenance_expire_start: '', maintenance_expire_end: '',
   page: 1, pageSize: 10
 });
 
 watch(createRange, (v) => { query.start_date = v?.[0] || ''; query.end_date = v?.[1] || ''; });
 watch(finishRange, (v) => { query.finish_start = v?.[0] || ''; query.finish_end = v?.[1] || ''; });
+watch(maintenanceExpireRange, (v) => { query.maintenance_expire_start = v?.[0] || ''; query.maintenance_expire_end = v?.[1] || ''; });
 
 async function load() {
   loading.value = true;
@@ -164,8 +174,8 @@ async function load() {
 }
 function reload() { query.page = 1; load(); }
 function resetQuery() {
-  Object.assign(query, { keyword: '', project_type: '', status: '', status_group: '', tech_id: '', settled: '', server_first_push: '', server_owner: '', tag_id: '', start_date: '', end_date: '', finish_start: '', finish_end: '', page: 1 });
-  createRange.value = []; finishRange.value = [];
+  Object.assign(query, { keyword: '', project_type: '', status: '', status_group: '', payment_requested: '', tech_id: '', settled: '', server_first_push: '', server_owner: '', tag_id: '', start_date: '', end_date: '', finish_start: '', finish_end: '', maintenance_expire_start: '', maintenance_expire_end: '', page: 1 });
+  createRange.value = []; finishRange.value = []; maintenanceExpireRange.value = [];
   load();
 }
 
@@ -204,6 +214,7 @@ onMounted(async () => {
   [techs.value, tags.value] = await Promise.all([api.techOptions(), api.listTags()]);
   if (route.query.status) query.status = route.query.status;
   if (route.query.status_group) query.status_group = route.query.status_group;
+  if (route.query.payment_requested !== undefined) query.payment_requested = Number(route.query.payment_requested);
   if (route.query.project_type) query.project_type = Number(route.query.project_type);
   load();
 });
