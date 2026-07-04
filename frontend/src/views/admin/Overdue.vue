@@ -2,15 +2,29 @@
   <div>
     <div class="mb-6"><h2 class="page-title">回款逾期统计</h2><p class="page-sub">已完工但未结算尾款的项目（含旧项目）· 按逾期天数排序</p></div>
 
-    <!-- 服务器 / 维护费到期预警 -->
-    <div v-if="warning.length" class="apple-card mb-4">
-      <div class="font-medium mb-3 flex items-center gap-2"><el-icon color="#ff375f"><Warning /></el-icon> 服务器 / 维护费到期预警</div>
-      <el-table :data="warning" size="small">
+    <!-- 服务器到期预警 -->
+    <div v-if="serverWarnings.length" class="apple-card mb-4">
+      <div class="font-medium mb-3 flex items-center gap-2"><el-icon color="#ff375f"><Warning /></el-icon> 服务器到期预警</div>
+      <el-table :data="serverWarnings" size="small">
         <el-table-column prop="name" label="项目" min-width="160" />
-        <el-table-column prop="warning_label" label="类型" width="90" />
         <el-table-column prop="customer_name" label="客户" width="100" />
         <el-table-column prop="expire_date" label="到期日" width="120" />
         <el-table-column prop="server_owner" label="归属" width="80" />
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.expired?'danger':'warning'" size="small">{{ row.expired ? `已过期${-row.remainDays}天` : `剩${row.remainDays}天` }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 维护费到期预警 -->
+    <div v-if="maintenanceWarnings.length" class="apple-card mb-4">
+      <div class="font-medium mb-3 flex items-center gap-2"><el-icon color="#ff9500"><Warning /></el-icon> 维护费到期预警</div>
+      <el-table :data="maintenanceWarnings" size="small">
+        <el-table-column prop="name" label="项目" min-width="160" />
+        <el-table-column prop="customer_name" label="客户" width="100" />
+        <el-table-column prop="expire_date" label="到期日" width="120" />
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
             <el-tag :type="row.expired?'danger':'warning'" size="small">{{ row.expired ? `已过期${-row.remainDays}天` : `剩${row.remainDays}天` }}</el-tag>
@@ -42,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { Warning } from '@element-plus/icons-vue';
 import { api } from '@/api';
 import { money } from '@/utils/constants';
@@ -50,6 +64,8 @@ import { money } from '@/utils/constants';
 const loading = ref(false);
 const list = ref([]);
 const warning = ref([]);
+const serverWarnings = computed(() => warning.value.filter((x) => x.warning_type === 'server'));
+const maintenanceWarnings = computed(() => warning.value.filter((x) => x.warning_type === 'maintenance'));
 
 onMounted(async () => {
   loading.value = true;
