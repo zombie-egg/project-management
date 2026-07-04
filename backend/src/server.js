@@ -22,6 +22,9 @@ app.use(express.urlencoded({ extended: true }));
 // 确保上传目录存在
 if (!fs.existsSync(config.UPLOAD_DIR)) fs.mkdirSync(config.UPLOAD_DIR, { recursive: true });
 
+const publicDir = path.join(__dirname, '..', 'public');
+const hasFrontendBuild = fs.existsSync(path.join(publicDir, 'index.html'));
+
 // 路由
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
@@ -34,7 +37,16 @@ app.use('/api', require('./routes/misc'));
 // 健康检查
 app.get('/api/health', (req, res) => res.json({ code: 0, message: 'ok', data: { time: new Date().toISOString() } }));
 
-// 404
+// 生产环境：由后端托管前端构建产物，兼容 Vue history/hash 路由刷新。
+if (hasFrontendBuild) {
+  app.use(express.static(publicDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    return res.sendFile(path.join(publicDir, 'index.html'));
+  });
+}
+
+// API 404
 app.use((req, res) => {
   res.status(404).json({ code: 404, message: '接口不存在', data: null });
 });

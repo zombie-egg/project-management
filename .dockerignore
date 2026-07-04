@@ -1,0 +1,16 @@
+.git
+.DS_Store
+
+**/node_modules
+**/dist
+**/coverage
+
+backend/data
+backend/uploads
+backend/public
+
+.env
+.env.*
+!.env.example
+
+*.log
