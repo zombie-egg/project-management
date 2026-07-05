@@ -92,6 +92,8 @@
         </el-table-column>
         <el-table-column label="收入" width="110"><template #default="{ row }">{{ money(row.income) }}</template></el-table-column>
         <el-table-column label="利润" width="110"><template #default="{ row }"><span style="color:#34c759">{{ money(row.profit) }}</span></template></el-table-column>
+        <el-table-column label="技术费已结" width="120"><template #default="{ row }">{{ money(row.tech_fee_paid) }}</template></el-table-column>
+        <el-table-column label="技术费剩余" width="120"><template #default="{ row }"><span :style="{ color: row.tech_fee_unpaid > 0 ? '#ff375f' : '#34c759' }">{{ money(row.tech_fee_unpaid) }}</span></template></el-table-column>
         <el-table-column label="结算" width="80">
           <template #default="{ row }"><el-tag :type="row.settled ? 'success' : 'warning'" size="small" effect="plain">{{ row.settled ? '已结算' : '未结算' }}</el-tag></template>
         </el-table-column>

@@ -62,6 +62,20 @@
         </el-alert>
       </div>
 
+      <!-- 技术费结算（管理员可见）-->
+      <div v-if="isAdmin && !isHistoryProject(p.project_type)" class="apple-card mb-4">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div class="font-medium mb-2">技术费结算</div>
+            <div class="text-sm text-apple-gray">
+              技术费用 {{ money(p.tech_fee) }} · 已结算 {{ money(p.tech_fee_paid) }} · 剩余未结算
+              <span :style="{ color: p.tech_fee_unpaid > 0 ? '#ff375f' : '#34c759' }">{{ money(p.tech_fee_unpaid) }}</span>
+            </div>
+          </div>
+          <el-button type="primary" :disabled="!p.tech_fee_unpaid" @click="openSettlement">部分结算</el-button>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- 基础信息 -->
         <div class="apple-card">
@@ -86,6 +100,8 @@
           <InfoRow label="尾款" :value="money(p.final_payment)" />
           <InfoRow label="项目成本" :value="money(p.project_cost)" />
           <InfoRow label="技术费用" :value="money(p.tech_fee)" />
+          <InfoRow label="技术费已结算" :value="money(p.tech_fee_paid)" />
+          <InfoRow label="技术费剩余未结算" :value="money(p.tech_fee_unpaid)" />
           <InfoRow label="维护金额" :value="money(p.maintenance_amount)" />
           <InfoRow label="维护费到期" :value="p.maintenance_expire_date" />
           <InfoRow label="源码是否提交" :value="p.source_uploaded === null || p.source_uploaded === undefined ? '未填写' : (p.source_uploaded ? '是' : '否')" />
@@ -138,11 +154,26 @@
         </el-timeline>
       </div>
     </template>
+
+    <el-dialog v-model="settlementDialog" title="技术费部分结算" width="460px">
+      <el-form :model="settlementForm" label-width="100px">
+        <el-form-item label="剩余未结算"><span class="font-medium">{{ money(p?.tech_fee_unpaid) }}</span></el-form-item>
+        <el-form-item label="本次结算">
+          <el-input-number v-model="settlementForm.amount" :min="0" :max="p?.tech_fee_unpaid || 0" :precision="2" class="w-full" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="结算日期"><el-date-picker v-model="settlementForm.received_at" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="settlementForm.remark" placeholder="如 技术费部分结算" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="settlementDialog=false">取消</el-button>
+        <el-button type="primary" @click="submitSettlement">确认结算</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue';
+import { ref, reactive, computed, onMounted, h } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { api } from '@/api';
@@ -163,6 +194,8 @@ const loading = ref(false);
 const p = ref(null);
 const note = ref('');
 const sourceUploaded = ref(1);
+const settlementDialog = ref(false);
+const settlementForm = reactive({ amount: 0, received_at: '', remark: '' });
 
 const statusType = computed(() => STATUS_TAG_TYPE[p.value?.status] || '');
 const activeStep = computed(() => {
@@ -204,6 +237,23 @@ async function advance() {
 async function markCompleted() {
   await api.updateProject(p.value.id, { status: 'completed' });
   ElMessage.success('已标记为已完工');
+  load();
+}
+
+function openSettlement() {
+  Object.assign(settlementForm, {
+    amount: p.value?.tech_fee_unpaid || 0,
+    received_at: new Date().toISOString().slice(0, 10),
+    remark: '技术费部分结算'
+  });
+  settlementDialog.value = true;
+}
+
+async function submitSettlement() {
+  if (!settlementForm.amount || settlementForm.amount <= 0) return ElMessage.warning('请输入本次结算金额');
+  await api.settleTechFee(p.value.id, settlementForm);
+  ElMessage.success('结算成功');
+  settlementDialog.value = false;
   load();
 }
 

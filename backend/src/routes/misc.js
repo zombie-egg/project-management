@@ -276,9 +276,11 @@ router.get('/tech-summary', authRequired, (req, res) => {
   const list = rows.map((p) => {
     const { income } = computeProfit(p);
     const techFee = Number(p.tech_fee) || 0;
+    const techFeePaid = getTechFeePaid(p.id);
+    const techFeeUnpaid = Math.max(0, round2(techFee - techFeePaid));
     totalIncome += income;
     totalTechFee += techFee;
-    if (!p.settled) unpaidTechFee += techFee;
+    unpaidTechFee += techFeeUnpaid;
     if (p.status === 'completed') completed++;
     if (p.payment_requested && !p.settled) paymentRequested++;
     return {
@@ -290,7 +292,8 @@ router.get('/tech-summary', authRequired, (req, res) => {
       progress: progressPercent(p.status),
       income: round2(income),
       tech_fee: round2(techFee),
-      unpaid_tech_fee: p.settled ? 0 : round2(techFee),
+      tech_fee_paid: techFeePaid,
+      unpaid_tech_fee: techFeeUnpaid,
       payment_requested: p.payment_requested,
       source_uploaded: p.source_uploaded,
       settled: p.settled,
@@ -319,6 +322,13 @@ function progressPercent(status) {
   const idx = flow.indexOf(status);
   if (idx <= 0) return 0;
   return Math.round((idx / (flow.length - 1)) * 100);
+}
+
+function getTechFeePaid(projectId) {
+  const row = db.prepare(
+    `SELECT COALESCE(SUM(amount),0) paid FROM ledger WHERE deleted=0 AND project_id=? AND type='techfee' AND direction='out'`
+  ).get(projectId);
+  return round2(row?.paid || 0);
 }
 
 // ==================== 简易统计：技术员下拉、项目下拉 ====================

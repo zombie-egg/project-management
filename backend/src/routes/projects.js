@@ -47,6 +47,8 @@ function enrich(p) {
   p.status_label = STAGE_LABEL[p.status] || p.status;
   p.project_type = normalizeProjectType(p.project_type);
   p.type_label = projectTypeLabel(p.project_type);
+  p.tech_fee_paid = getTechFeePaid(p.id);
+  p.tech_fee_unpaid = Math.max(0, round2((Number(p.tech_fee) || 0) - p.tech_fee_paid));
   const tech = p.tech_id ? db.prepare(`SELECT name FROM users WHERE id=?`).get(p.tech_id) : null;
   p.tech_name = tech ? tech.name : '';
   p.tags = db.prepare(
@@ -70,7 +72,13 @@ function buildQuery(q) {
   if (projectType) where.push(projectTypeWhere('p', projectType));
   if (q.status) { where.push(`p.status=?`); params.push(q.status); }
   if (q.status_group === 'in_progress') where.push(`p.status IN ('stage1','stage2','stage3','stage4','stage5')`);
-  if (q.payment_requested !== undefined && q.payment_requested !== '') { where.push(`p.payment_requested=?`); params.push(Number(q.payment_requested)); }
+  if (q.payment_requested !== undefined && q.payment_requested !== '') {
+    if (Number(q.payment_requested) === 1) {
+      where.push(`p.payment_requested=1 AND (COALESCE(p.tech_fee,0) - COALESCE((SELECT SUM(l.amount) FROM ledger l WHERE l.deleted=0 AND l.project_id=p.id AND l.type='techfee' AND l.direction='out'),0)) > 0`);
+    } else {
+      where.push(`p.payment_requested=0`);
+    }
+  }
   if (q.tech_id) { where.push(`p.tech_id=?`); params.push(Number(q.tech_id)); }
   if (q.settled !== undefined && q.settled !== '') { where.push(`p.settled=?`); params.push(Number(q.settled)); }
   if (q.server_first_push) { where.push(`p.server_first_push=?`); params.push(q.server_first_push); }
@@ -285,6 +293,24 @@ router.patch('/:id/assign', authRequired, adminOnly, (req, res) => {
   return ok(res, null, '分配成功');
 });
 
+// ---------------- 技术费用部分结算（仅管理员）----------------
+router.post('/:id/tech-settlement', authRequired, adminOnly, (req, res) => {
+  const id = Number(req.params.id);
+  const { amount, received_at, remark } = req.body || {};
+  const p = db.prepare(`SELECT * FROM projects WHERE id=? AND deleted=0`).get(id);
+  if (!p) return fail(res, '项目不存在', 404);
+  const value = num(amount);
+  if (value <= 0) return fail(res, '结算金额必须大于0');
+  const paid = getTechFeePaid(id);
+  const unpaid = Math.max(0, round2((Number(p.tech_fee) || 0) - paid));
+  if (value > unpaid) return fail(res, `结算金额不能超过剩余未结算技术费 ${unpaid}`);
+  const info = db.prepare(
+    `INSERT INTO ledger (project_id, type, amount, direction, received_at, operator_id, remark) VALUES (?,?,?,?,?,?,?)`
+  ).run(id, 'techfee', value, 'out', received_at || new Date().toISOString().slice(0, 10), req.user.id, remark || '技术费用结算');
+  writeLog({ user: req.user, action: 'settle_tech_fee', targetType: 'ledger', targetId: info.lastInsertRowid, detail: `项目「${p.name}」技术费结算 ${value} 元` });
+  return ok(res, { id: info.lastInsertRowid, paid: round2(paid + value), unpaid: round2(unpaid - value) }, '结算成功');
+});
+
 // ---------------- 进度流转（技术员/管理员，常规项目按顺序）----------------
 router.patch('/:id/progress', authRequired, (req, res) => {
   const id = Number(req.params.id);
@@ -411,6 +437,13 @@ function num(v) {
 function normalizeOptionalBool(v) {
   if (v === undefined || v === null || v === '') return null;
   return v === true || v === 1 || v === '1' || v === '是' ? 1 : 0;
+}
+
+function getTechFeePaid(projectId) {
+  const row = db.prepare(
+    `SELECT COALESCE(SUM(amount),0) paid FROM ledger WHERE deleted=0 AND project_id=? AND type='techfee' AND direction='out'`
+  ).get(projectId);
+  return round2(row?.paid || 0);
 }
 
 function setProjectTags(projectId, tagIds) {

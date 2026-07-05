@@ -76,6 +76,7 @@ export const api = {
   createProject: (data) => http.post('/projects', data),
   updateProject: (id, data) => http.put(`/projects/${id}`, data),
   assignProject: (id, tech_id) => http.patch(`/projects/${id}/assign`, { tech_id }),
+  settleTechFee: (id, data) => http.post(`/projects/${id}/tech-settlement`, data),
   progressProject: (id, data) => http.patch(`/projects/${id}/progress`, data),
   deleteProject: (id) => http.delete(`/projects/${id}`),
   batchDeleteProjects: (ids) => http.post('/projects/batch-delete', { ids }),

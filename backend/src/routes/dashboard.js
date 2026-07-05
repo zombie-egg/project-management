@@ -54,7 +54,7 @@ router.get('/', (req, res) => {
     if (p.status === 'completed') completed++;
     else if (p.status === 'pending') pending++;
     else inProgress++;
-    if (p.payment_requested && !p.settled) pendingPaymentRequests++;
+    if (p.payment_requested && getTechFeeUnpaid(p) > 0) pendingPaymentRequests++;
 
     if (isHistoryProject(p)) { maintenanceCount++; maintenanceAmount += income; }
     else { normalCount++; normalAmount += income; }
@@ -161,6 +161,13 @@ function sortedSeries(obj) {
 function periodKey(date, period) {
   const s = String(date || '');
   return period === 'year' ? s.slice(0, 4) : s.slice(0, 7);
+}
+
+function getTechFeeUnpaid(project) {
+  const row = db.prepare(
+    `SELECT COALESCE(SUM(amount),0) paid FROM ledger WHERE deleted=0 AND project_id=? AND type='techfee' AND direction='out'`
+  ).get(project.id);
+  return Math.max(0, round2((Number(project.tech_fee) || 0) - (row?.paid || 0)));
 }
 
 module.exports = router;

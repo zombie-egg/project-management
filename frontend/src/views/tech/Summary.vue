@@ -34,6 +34,7 @@
         </el-table-column>
         <el-table-column label="项目营收" width="130"><template #default="{ row }">{{ money(row.income) }}</template></el-table-column>
         <el-table-column label="技术费用" width="130"><template #default="{ row }">{{ money(row.tech_fee) }}</template></el-table-column>
+        <el-table-column label="已支付" width="130"><template #default="{ row }">{{ money(row.tech_fee_paid) }}</template></el-table-column>
         <el-table-column label="待支付" width="130"><template #default="{ row }"><span :style="{ color: row.unpaid_tech_fee ? '#ff375f' : '#34c759' }">{{ money(row.unpaid_tech_fee) }}</span></template></el-table-column>
         <el-table-column label="申请" width="110">
           <template #default="{ row }">
