@@ -51,7 +51,7 @@ export function projectTypeShortLabel(v) {
 
 export const LEDGER_TYPE_LABEL = {
   first: '首付款', mid: '中期款', final: '尾款',
-  maintenance: '维护款', cost: '成本支出', techfee: '技术费用'
+  maintenance: '维护款', cost: '成本支出', techfee: '技术费用', other: '其他'
 };
 
 export function money(n) {

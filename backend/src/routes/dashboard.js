@@ -69,6 +69,16 @@ router.get('/', (req, res) => {
     }
   }
 
+  const customWhere = [`deleted=0`, `project_id IS NULL`, `direction='out'`];
+  const customParams = [];
+  if (month) { customWhere.push(`strftime('%Y-%m', received_at)=?`); customParams.push(month); }
+  else if (year) { customWhere.push(`strftime('%Y', received_at)=?`); customParams.push(year); }
+  const customOut = db.prepare(
+    `SELECT COALESCE(SUM(amount),0) total FROM ledger WHERE ${customWhere.join(' AND ')}`
+  ).get(...customParams).total || 0;
+  totalCost += Number(customOut) || 0;
+  totalProfit -= Number(customOut) || 0;
+
   // ---- 月度营收/利润（基于台账收款时间 + 项目）----
   const ledgerRows = db.prepare(
     `SELECT l.type, l.amount, l.direction, l.received_at

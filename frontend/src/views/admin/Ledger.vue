@@ -16,7 +16,7 @@
 
     <div class="apple-card mb-4">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <el-input v-model="query.keyword" placeholder="搜索项目/备注" clearable :prefix-icon="Search" @keyup.enter="reload" />
+        <el-input v-model="query.keyword" placeholder="搜索项目/自定义名称/备注" clearable :prefix-icon="Search" @keyup.enter="reload" />
         <el-select v-model="query.type" placeholder="款项类型" clearable><el-option v-for="(v,k) in LEDGER_TYPE_LABEL" :key="k" :label="v" :value="k" /></el-select>
         <el-select v-model="query.direction" placeholder="收支方向" clearable><el-option label="收入" value="in" /><el-option label="支出" value="out" /></el-select>
         <el-date-picker v-model="range" type="daterange" range-separator="~" start-placeholder="起" end-placeholder="止" value-format="YYYY-MM-DD" />
@@ -61,11 +61,18 @@
 
     <el-dialog v-model="dialog" title="新增流水" width="460px">
       <el-form :model="form" label-width="90px">
-        <el-form-item label="项目" required>
+        <el-form-item label="流水归属">
+          <el-radio-group v-model="form.entry_mode" @change="onEntryModeChange">
+            <el-radio value="project">项目流水</el-radio>
+            <el-radio value="custom">自定义流水</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="form.entry_mode==='project'" label="项目" required>
           <el-select v-model="form.project_id" filterable placeholder="选择项目" class="w-full">
             <el-option v-for="p in projects" :key="p.id" :label="p.name" :value="p.id" />
           </el-select>
         </el-form-item>
+        <el-form-item v-else label="自定义名称" required><el-input v-model="form.custom_name" placeholder="如 保洁工资、办公用品、交通费" /></el-form-item>
         <el-form-item label="款项类型" required><el-select v-model="form.type" class="w-full"><el-option v-for="(v,k) in LEDGER_TYPE_LABEL" :key="k" :label="v" :value="k" /></el-select></el-form-item>
         <el-form-item label="方向"><el-radio-group v-model="form.direction"><el-radio value="in">收入</el-radio><el-radio value="out">支出</el-radio></el-radio-group></el-form-item>
         <el-form-item label="金额" required><el-input-number v-model="form.amount" :min="0" :precision="2" class="w-full" controls-position="right" /></el-form-item>
@@ -108,11 +115,26 @@ function reload() { query.page = 1; load(); }
 function reset() { Object.assign(query, { keyword: '', type: '', direction: '', start_date: '', end_date: '', year: '', month: '', summary_period: 'month', page: 1 }); range.value = []; load(); }
 
 const dialog = ref(false);
-const form = reactive({ project_id: null, type: 'first', direction: 'in', amount: 0, received_at: null, remark: '' });
-function openAdd() { Object.assign(form, { project_id: null, type: 'first', direction: 'in', amount: 0, received_at: null, remark: '' }); dialog.value = true; }
+const form = reactive({ entry_mode: 'project', project_id: null, custom_name: '', type: 'first', direction: 'in', amount: 0, received_at: null, remark: '' });
+function openAdd() { Object.assign(form, { entry_mode: 'project', project_id: null, custom_name: '', type: 'first', direction: 'in', amount: 0, received_at: null, remark: '' }); dialog.value = true; }
+function onEntryModeChange() {
+  if (form.entry_mode === 'custom') {
+    form.project_id = null;
+    form.type = 'other';
+    form.direction = 'out';
+  } else {
+    form.custom_name = '';
+    form.type = 'first';
+  }
+}
 async function onSubmit() {
-  if (!form.project_id || !form.type) return ElMessage.warning('请填写项目和类型');
-  await api.addLedger(form);
+  if (form.entry_mode === 'project' && !form.project_id) return ElMessage.warning('请选择项目');
+  if (form.entry_mode === 'custom' && !form.custom_name) return ElMessage.warning('请填写自定义名称');
+  if (!form.type) return ElMessage.warning('请选择款项类型');
+  const payload = { ...form };
+  delete payload.entry_mode;
+  if (form.entry_mode === 'custom') payload.project_id = null;
+  await api.addLedger(payload);
   ElMessage.success('新增成功');
   dialog.value = false; load();
 }

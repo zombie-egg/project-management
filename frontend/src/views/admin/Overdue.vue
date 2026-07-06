@@ -19,9 +19,9 @@
     </div>
 
     <!-- 维护费到期预警 -->
-    <div v-if="maintenanceWarnings.length" class="apple-card mb-4">
+    <div class="apple-card mb-4">
       <div class="font-medium mb-3 flex items-center gap-2"><el-icon color="#ff9500"><Warning /></el-icon> 维护费到期预警</div>
-      <el-table :data="maintenanceWarnings" size="small">
+      <el-table v-if="maintenanceWarnings.length" :data="maintenanceWarnings" size="small">
         <el-table-column prop="name" label="项目" min-width="160" />
         <el-table-column prop="customer_name" label="客户" width="100" />
         <el-table-column prop="expire_date" label="到期日" width="120" />
@@ -31,6 +31,7 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-empty v-else description="暂无维护费到期预警" :image-size="60" />
     </div>
 
     <div class="apple-card">

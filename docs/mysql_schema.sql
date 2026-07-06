@@ -103,8 +103,9 @@ CREATE TABLE IF NOT EXISTS project_tags (
 -- ---------- 资金台账 ----------
 CREATE TABLE IF NOT EXISTS ledger (
   id          BIGINT PRIMARY KEY AUTO_INCREMENT,
-  project_id  BIGINT NOT NULL,
-  type        VARCHAR(16) NOT NULL COMMENT 'first/mid/final/maintenance/cost/techfee',
+  project_id  BIGINT NULL,
+  custom_name VARCHAR(128) DEFAULT '' COMMENT '非项目类自定义流水名称',
+  type        VARCHAR(16) NOT NULL COMMENT 'first/mid/final/maintenance/cost/techfee/other',
   amount      DECIMAL(12,2) NOT NULL DEFAULT 0,
   direction   VARCHAR(8) NOT NULL DEFAULT 'in' COMMENT 'in收入/out支出',
   received_at DATE NULL COMMENT '收付款时间',

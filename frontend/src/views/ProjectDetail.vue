@@ -83,9 +83,11 @@
           <InfoRow label="项目描述" :value="p.description" />
           <InfoRow label="项目要求" :value="p.requirement" />
           <InfoRow label="项目工期" :value="p.duration" />
-          <InfoRow label="项目群名" :value="p.group_name" />
-          <InfoRow label="客户姓名" :value="p.customer_name" />
-          <InfoRow label="客户联系方式" :value="p.customer_phone" />
+          <template v-if="isAdmin">
+            <InfoRow label="项目群名" :value="p.group_name" />
+            <InfoRow label="客户姓名" :value="p.customer_name" />
+            <InfoRow label="客户联系方式" :value="p.customer_phone" />
+          </template>
           <InfoRow label="分配技术员" :value="p.tech_name || '未分配'" />
           <InfoRow label="项目开始时间" :value="p.start_time" />
           <InfoRow label="实际完工时间" :value="p.actual_finish_time" />
@@ -93,26 +95,34 @@
 
         <!-- 资金信息 -->
         <div class="apple-card">
-          <div class="font-medium mb-4">资金信息</div>
-          <InfoRow label="开发总酬劳" :value="money(p.total_reward)" />
-          <InfoRow label="首付款" :value="money(p.first_payment)" />
-          <InfoRow label="中期款" :value="money(p.mid_payment)" />
-          <InfoRow label="尾款" :value="money(p.final_payment)" />
-          <InfoRow label="项目成本" :value="money(p.project_cost)" />
-          <InfoRow label="技术费用" :value="money(p.tech_fee)" />
-          <InfoRow label="技术费已结算" :value="money(p.tech_fee_paid)" />
-          <InfoRow label="技术费剩余未结算" :value="money(p.tech_fee_unpaid)" />
-          <InfoRow label="维护金额" :value="money(p.maintenance_amount)" />
-          <InfoRow label="维护费到期" :value="p.maintenance_expire_date" />
-          <InfoRow label="源码是否提交" :value="p.source_uploaded === null || p.source_uploaded === undefined ? '未填写' : (p.source_uploaded ? '是' : '否')" />
-          <div class="flex justify-between py-2 border-t border-apple-line mt-2">
-            <span class="text-apple-gray">合计收入 / 利润</span>
-            <span><b class="text-apple-blue">{{ money(p.income) }}</b> / <b style="color:#34c759">{{ money(p.profit) }}</b></span>
-          </div>
+          <div class="font-medium mb-4">{{ isAdmin ? '资金信息' : '我的收入' }}</div>
+          <template v-if="isAdmin">
+            <InfoRow label="开发总酬劳" :value="money(p.total_reward)" />
+            <InfoRow label="首付款" :value="money(p.first_payment)" />
+            <InfoRow label="中期款" :value="money(p.mid_payment)" />
+            <InfoRow label="尾款" :value="money(p.final_payment)" />
+            <InfoRow label="项目成本" :value="money(p.project_cost)" />
+            <InfoRow label="技术费用" :value="money(p.tech_fee)" />
+            <InfoRow label="技术费已结算" :value="money(p.tech_fee_paid)" />
+            <InfoRow label="技术费剩余未结算" :value="money(p.tech_fee_unpaid)" />
+            <InfoRow label="维护金额" :value="money(p.maintenance_amount)" />
+            <InfoRow label="维护费到期" :value="p.maintenance_expire_date" />
+            <InfoRow label="源码是否提交" :value="p.source_uploaded === null || p.source_uploaded === undefined ? '未填写' : (p.source_uploaded ? '是' : '否')" />
+            <div class="flex justify-between py-2 border-t border-apple-line mt-2">
+              <span class="text-apple-gray">合计收入 / 利润</span>
+              <span><b class="text-apple-blue">{{ money(p.income) }}</b> / <b style="color:#34c759">{{ money(p.profit) }}</b></span>
+            </div>
+          </template>
+          <template v-else>
+            <InfoRow label="累计收入" :value="money(p.tech_fee)" />
+            <InfoRow label="已支付" :value="money(p.tech_fee_paid)" />
+            <InfoRow label="待支付费用" :value="money(p.tech_fee_unpaid)" />
+            <InfoRow label="源码是否提交" :value="p.source_uploaded === null || p.source_uploaded === undefined ? '未填写' : (p.source_uploaded ? '是' : '否')" />
+          </template>
         </div>
 
         <!-- 服务器信息 -->
-        <div class="apple-card">
+        <div v-if="isAdmin" class="apple-card">
           <div class="font-medium mb-4">服务器信息</div>
           <InfoRow label="是否首推" :value="p.server_first_push" />
           <InfoRow label="终推归属" :value="p.server_owner" />

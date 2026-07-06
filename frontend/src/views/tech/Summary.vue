@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between mb-6">
       <div>
         <h2 class="page-title">我的汇总</h2>
-        <p class="page-sub">接单数量、项目明细、进度、累计技术费用和待支付金额</p>
+        <p class="page-sub">接单数量、项目明细、进度、累计收入和待支付金额</p>
       </div>
       <el-button :icon="Refresh" circle @click="load" />
     </div>
@@ -13,9 +13,8 @@
       <div class="apple-card !p-4"><div class="text-sm text-apple-gray">已完工</div><div class="text-2xl font-semibold mt-1" style="color:#34c759">{{ summary.completed }}</div></div>
       <div class="apple-card !p-4"><div class="text-sm text-apple-gray">付款申请中</div><div class="text-2xl font-semibold mt-1" style="color:#ff9500">{{ summary.paymentRequested }}</div></div>
       <div class="apple-card !p-4"><div class="text-sm text-apple-gray">完工率</div><div class="text-2xl font-semibold mt-1">{{ summary.completeRate }}%</div></div>
-      <div class="apple-card !p-4"><div class="text-sm text-apple-gray">累计项目营收</div><div class="text-xl font-semibold text-apple-blue mt-1">{{ money(summary.totalIncome) }}</div></div>
-      <div class="apple-card !p-4"><div class="text-sm text-apple-gray">累计技术费用</div><div class="text-xl font-semibold mt-1" style="color:#34c759">{{ money(summary.totalTechFee) }}</div></div>
-      <div class="apple-card !p-4"><div class="text-sm text-apple-gray">待支付技术费用</div><div class="text-xl font-semibold mt-1" style="color:#ff375f">{{ money(summary.unpaidTechFee) }}</div></div>
+      <div class="apple-card !p-4"><div class="text-sm text-apple-gray">累计收入</div><div class="text-xl font-semibold mt-1" style="color:#34c759">{{ money(summary.totalTechFee) }}</div></div>
+      <div class="apple-card !p-4"><div class="text-sm text-apple-gray">待支付费用</div><div class="text-xl font-semibold mt-1" style="color:#ff375f">{{ money(summary.unpaidTechFee) }}</div></div>
       <div class="apple-card !p-4"><div class="text-sm text-apple-gray">进行中项目</div><div class="text-2xl font-semibold mt-1" style="color:#ff9500">{{ summary.inProgress }}</div></div>
     </div>
 
@@ -32,8 +31,7 @@
         <el-table-column label="进度" min-width="160">
           <template #default="{ row }"><el-progress :percentage="row.progress" :stroke-width="6" /></template>
         </el-table-column>
-        <el-table-column label="项目营收" width="130"><template #default="{ row }">{{ money(row.income) }}</template></el-table-column>
-        <el-table-column label="技术费用" width="130"><template #default="{ row }">{{ money(row.tech_fee) }}</template></el-table-column>
+        <el-table-column label="收入" width="130"><template #default="{ row }">{{ money(row.tech_fee) }}</template></el-table-column>
         <el-table-column label="已支付" width="130"><template #default="{ row }">{{ money(row.tech_fee_paid) }}</template></el-table-column>
         <el-table-column label="待支付" width="130"><template #default="{ row }"><span :style="{ color: row.unpaid_tech_fee ? '#ff375f' : '#34c759' }">{{ money(row.unpaid_tech_fee) }}</span></template></el-table-column>
         <el-table-column label="申请" width="110">
